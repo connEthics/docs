@@ -1,0 +1,170 @@
+---
+title: "Arazzo Runtime Expressions Reference and Usage Guide"
+sidebarTitle: "Runtime Expressions"
+description: "Runtime expressions pass dynamic values between Arazzo workflow steps using $statusCode, $response.body, $inputs, $steps, $outputs, and more."
+---
+
+Runtime expressions are the mechanism that brings Arazzo workflows to life. Instead of hard-coding values into every step, you use runtime expressions to reference data that will only be available at execution time — the status code returned by an API call, a token in a response body, or a parameter passed in when the workflow started. This is how Arazzo steps share data with each other and how a session token captured in step one can flow automatically into the `Authorization` header of every subsequent step.
+
+<Tip>
+  Arazzo VSCode provides autocompletion for runtime expressions as you type. When you start typing `$steps.`, the extension suggests valid step IDs from the current workflow and their declared outputs — so you don't have to remember them by hand.
+</Tip>
+
+## Expression Reference
+
+Use these expressions anywhere a dynamic value is expected — in `parameters`, `requestBody`, `outputs`, `successCriteria`, and `context` fields.
+
+| Expression | Description | Example |
+|---|---|---|
+| `$url` | The full URL of the current HTTP request. | `$url` |
+| `$method` | The HTTP method of the current request. | `$method` |
+| `$statusCode` | The HTTP status code returned by the response. | `$statusCode == 200` |
+| `$request.header.<name>` | The value of a named request header. | `$request.header.Content-Type` |
+| `$request.query.<name>` | The value of a named query parameter from the request. | `$request.query.status` |
+| `$request.body` | The full request body. Append a JSON Pointer to target a specific field. | `$request.body#/user/uuid` |
+| `$response.header.<name>` | The value of a named response header. | `$response.header.X-Rate-Limit` |
+| `$response.body` | The full response body. Append a JSON Pointer to target a nested field. | `$response.body#/token` |
+| `$inputs.<name>` | A workflow input value by name, as defined in the workflow's `inputs` schema. | `$inputs.username` |
+| `$outputs.<name>` | A workflow output value by name from the current workflow's `outputs` map. | `$outputs.accessToken` |
+| `$steps.<stepId>.outputs.<name>` | A named output captured by a previous step in the same workflow. | `$steps.loginStep.outputs.sessionToken` |
+| `$components.parameters.<name>` | A reusable parameter defined in the `components.parameters` section. | `$components.parameters.bearerAuth` |
+
+## JSON Pointer Syntax
+
+Several expressions support an optional JSON Pointer suffix (indicated by `#`) to navigate into a structured response body. JSON Pointer paths start with `/` and separate each key with `/`. Use `~1` to escape a literal `/` in a key name and `~0` to escape a literal `~`:
+
+```yaml
+# Access the id field of the first item in an array response
+outputs:
+  firstPetId: $response.body#/0/id
+
+# Access a nested field
+outputs:
+  userEmail: $response.body#/user/email
+
+# Access a path with a slash in the key (escaped as ~1)
+operationPath: "{$sourceDescriptions.petStoreDescription.url}#/paths/~1pet~1findByStatus/get"
+```
+
+## Chaining Steps with `$steps`
+
+The most common use of runtime expressions is passing data from one step to the next using `$steps.<stepId>.outputs.<name>`. You first declare an output in the producing step, then reference it by name in any subsequent step:
+
+```yaml
+workflows:
+  - workflowId: authenticatedSearch
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      # Step 1: log in and capture the session token
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          # Capture the token from the response body
+          sessionToken: $response.body
+          tokenExpiry: $response.header.X-Expires-After
+
+      # Step 2: use the token captured in Step 1
+      - stepId: searchStep
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: Authorization
+            in: header
+            # Reference the output from the previous step
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          results: $response.body
+
+      # Step 3: use outputs from both previous steps
+      - stepId: placeOrderStep
+        operationId: placeOrder
+        parameters:
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        requestBody:
+          payload:
+            petId: $steps.searchStep.outputs.results#/0/id
+            quantity: 1
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+## Referencing Workflow Inputs
+
+Use `$inputs.<name>` to pass workflow-level inputs into individual step parameters. The input names correspond to the property names declared in the workflow's `inputs` JSON Schema:
+
+```yaml
+workflows:
+  - workflowId: createUser
+    inputs:
+      type: object
+      properties:
+        email:
+          type: string
+        role:
+          type: string
+          default: viewer
+    steps:
+      - stepId: createUserStep
+        operationId: postUser
+        requestBody:
+          payload:
+            email: $inputs.email
+            role: $inputs.role
+        successCriteria:
+          - condition: $statusCode == 201
+```
+
+## Reusable Component Parameters
+
+When the same parameter value appears across many steps — for example, a shared `Authorization` header — define it once in `components.parameters` and reference it everywhere:
+
+```yaml
+components:
+  parameters:
+    bearerToken:
+      name: Authorization
+      in: header
+      value: $steps.loginStep.outputs.sessionToken
+
+workflows:
+  - workflowId: multiStepWorkflow
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        outputs:
+          sessionToken: $response.body
+
+      - stepId: readStep
+        operationId: getProfile
+        parameters:
+          - $ref: $components.parameters.bearerToken
+
+      - stepId: updateStep
+        operationId: updateProfile
+        parameters:
+          - $ref: $components.parameters.bearerToken
+        requestBody:
+          payload:
+            displayName: Updated Name
+```

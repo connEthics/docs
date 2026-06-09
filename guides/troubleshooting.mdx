@@ -1,0 +1,197 @@
+---
+title: "Troubleshoot Arazzo VSCode Errors and Warnings"
+sidebarTitle: "Troubleshooting"
+description: "Fix common Arazzo VSCode validation errors and warnings: missing fields, invalid references, duplicate step IDs, and more."
+---
+
+When the Arazzo VSCode extension finds a problem in your specification, it marks the affected line with a red or yellow squiggle in the editor and adds a corresponding entry to the **Problems panel** (open with `View → Problems` or `Ctrl+Shift+M` / `Cmd+Shift+M`). Validation runs automatically as you type, so errors appear within a few hundred milliseconds of making a change. The sections below cover every error and warning the extension can produce, along with the exact fix for each.
+
+## Common errors and fixes
+
+<Accordion title='"This file is not an Arazzo specification document"'>
+  **Cause**: You ran `Open Arazzo Preview` or `Open Arazzo Flowchart` on a YAML file that does not contain an `arazzo:` key at the root level.
+
+  **Fix**: Add the version field as the very first line of your YAML file:
+
+  ```yaml
+  arazzo: "1.0.1"
+  ```
+
+  The extension detects Arazzo files solely by the presence of this root key.
+</Accordion>
+
+<Accordion title='Missing required field: arazzo / info / sourceDescriptions / workflows'>
+  **Cause**: One or more of the four required top-level fields is absent from the document.
+
+  **Fix**: Your document must contain all four at the root level:
+
+  ```yaml
+  arazzo: "1.0.1"
+  info:
+    title: My Workflow
+    version: "1.0.0"
+  sourceDescriptions:
+    - name: myApi
+      url: https://example.com/openapi.json
+      type: openapi
+  workflows:
+    - workflowId: myWorkflow
+      steps: []
+  ```
+</Accordion>
+
+<Accordion title='Missing required field: title / Missing required field: version (inside info)'>
+  **Cause**: The `info` object exists but is missing either `title` or `version`, both of which are required.
+
+  **Fix**: Add both sub-fields:
+
+  ```yaml
+  info:
+    title: Pet Store Workflow
+    version: "1.0.0"
+  ```
+</Accordion>
+
+<Accordion title="sourceDescriptions must have at least one entry">
+  **Cause**: The `sourceDescriptions` array is present but empty (`[]`).
+
+  **Fix**: Add at least one source description with a `name` and `url`:
+
+  ```yaml
+  sourceDescriptions:
+    - name: myApi
+      url: https://example.com/openapi.json
+      type: openapi
+  ```
+</Accordion>
+
+<Accordion title="workflows must have at least one entry">
+  **Cause**: The `workflows` array is present but empty (`[]`).
+
+  **Fix**: Add at least one workflow with a `workflowId` and `steps`:
+
+  ```yaml
+  workflows:
+    - workflowId: myWorkflow
+      steps:
+        - stepId: myStep
+          operationId: getUser
+  ```
+</Accordion>
+
+<Accordion title="steps must have at least one entry">
+  **Cause**: The `steps` array inside a workflow is present but empty (`[]`).
+
+  **Fix**: Add at least one step to the workflow:
+
+  ```yaml
+  workflows:
+    - workflowId: myWorkflow
+      steps:
+        - stepId: myStep
+          operationId: getUser
+          successCriteria:
+            - condition: $statusCode == 200
+  ```
+</Accordion>
+
+<Accordion title='Step must contain one of "operationId", "operationPath", or "workflowId"'>
+  **Cause**: A step exists but has none of the three required operation-targeting fields.
+
+  **Fix**: Add exactly one of the three to the step:
+
+  ```yaml
+  steps:
+    - stepId: myStep
+      operationId: getUser   # or operationPath, or workflowId
+      successCriteria:
+        - condition: $statusCode == 200
+  ```
+</Accordion>
+
+<Accordion title='Step must contain only one of "operationId", "operationPath", or "workflowId"'>
+  **Cause**: A step has more than one of `operationId`, `operationPath`, and `workflowId`. These fields are mutually exclusive.
+
+  **Fix**: Remove all but one of the three fields from the step.
+</Accordion>
+
+<Accordion title='Duplicate stepId "<id>" in workflow'>
+  **Cause**: Two or more steps within the same workflow share the same `stepId` value. The error message includes the duplicate ID, for example: `Duplicate stepId "loginStep" in workflow`.
+
+  **Fix**: Give each step a unique `stepId`. Step IDs must be unique within their parent workflow:
+
+  ```yaml
+  steps:
+    - stepId: loginStep       # unique
+      operationId: loginUser
+    - stepId: fetchDataStep   # unique
+      operationId: getData
+  ```
+</Accordion>
+
+<Accordion title='Referenced workflow "<id>" not found in dependsOn'>
+  **Cause**: A workflow lists a `workflowId` in its `dependsOn` array, but no workflow with that ID is defined in the same document. The error message includes the missing ID, for example: `Referenced workflow "setupWorkflow" not found in dependsOn`.
+
+  **Fix**: Verify the spelling and case of the referenced `workflowId`. All workflows referenced in `dependsOn` must be defined in the same Arazzo file.
+
+  ```yaml
+  workflows:
+    - workflowId: setupWorkflow   # must match exactly
+      steps: [...]
+    - workflowId: mainWorkflow
+      dependsOn:
+        - setupWorkflow           # must match the workflowId above
+      steps: [...]
+  ```
+</Accordion>
+
+<Accordion title='Source type must be "openapi" or "arazzo", got "<val>"'>
+  **Cause**: The `type` field in a source description entry contains an invalid value. The error message includes the bad value, for example: `Source type must be "openapi" or "arazzo", got "swagger"`.
+
+  **Fix**: Use only `openapi` or `arazzo` as the type value:
+
+  ```yaml
+  sourceDescriptions:
+    - name: myApi
+      url: https://example.com/openapi.json
+      type: openapi   # valid: openapi or arazzo
+  ```
+</Accordion>
+
+<Accordion title="Unrecognized Arazzo version: &lt;version&gt;. Known versions: 1.0.0, 1.0.1 (warning)">
+  **Cause**: The `arazzo:` field contains a version string that the extension does not recognise. This is a warning, not an error — the extension continues to work. The full message includes the known versions, for example: `Unrecognized Arazzo version: 2.0.0. Known versions: 1.0.0, 1.0.1`.
+
+  **Fix**: Use one of the supported versions:
+
+  ```yaml
+  arazzo: "1.0.1"   # supported: 1.0.0 or 1.0.1
+  ```
+</Accordion>
+
+<Accordion title="Preview or Flowchart panel is not updating">
+  **Cause**: Either the file is not being detected as an Arazzo document, or a YAML syntax error is preventing the parser from reading the file.
+
+  **Fix**:
+  1. Check the Problems panel for any **YAML syntax errors** — a broken YAML structure prevents detection entirely.
+  2. Ensure the file has `arazzo:` at the root level (not indented).
+  3. Save the file and wait a moment — updates are debounced by ~250 ms.
+</Accordion>
+
+<Accordion title="Extension does not activate">
+  **Cause**: The extension activates on `onLanguage:yaml`, which fires only when a YAML file is open. It will not activate on non-YAML files.
+
+  **Fix**:
+  1. Make sure you have a `.yaml` (or `.yml`) file open in the active editor.
+  2. Verify your VS Code version is **1.90.0 or newer** — earlier versions are not supported.
+  3. Check the Extensions panel to confirm `connethics.arazzo-vscode` is installed and enabled.
+</Accordion>
+
+## Getting more help
+
+<Note>
+  If you encounter a problem not covered here, open an issue on GitHub at [github.com/connEthics/arazzo-vscode/issues](https://github.com/connEthics/arazzo-vscode/issues). Include the content of your Arazzo file (or a minimal reproduction) and any error messages from the Problems panel.
+</Note>
+
+<Tip>
+  Use the online playground at [arazzo.connethics.com](https://arazzo.connethics.com/) to test your Arazzo specification in a browser-based environment without needing the VS Code extension at all.
+</Tip>

@@ -1,0 +1,66 @@
+---
+title: "Arazzo VSCode Keyboard Shortcuts and Custom Keybindings"
+sidebarTitle: "Shortcuts"
+description: "Arazzo VSCode has no default keybindings. Access Open Arazzo Preview and Open Arazzo Flowchart via Command Palette, toolbar, or custom keys."
+---
+
+The Arazzo VSCode extension does not ship any default keyboard shortcuts out of the box. You can reach both commands at any time using the Command Palette or the toolbar icons, and you can also assign your own custom keybindings through VS Code's standard keybindings configuration.
+
+## Default Access Methods
+
+Both the **Open Arazzo Preview** and **Open Arazzo Flowchart** commands are accessible without any additional setup:
+
+- **Command Palette:** Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS), then type **Open Arazzo Preview** or **Open Arazzo Flowchart** and press `Enter`.
+- **Toolbar icons:** Click the preview (eye) or graph icon in the editor title bar while a YAML file is active.
+
+<Tip>
+  The Command Palette is the fastest way to run any extension command without needing to configure a keybinding. You only need to type the first few letters of the command name — VS Code will fuzzy-match and surface it immediately.
+</Tip>
+
+## Assigning Custom Keyboard Shortcuts
+
+To bind either command to a key combination of your choice, add entries to your VS Code `keybindings.json` file.
+
+**Steps to open `keybindings.json`:**
+
+<Steps>
+  <Step title="Open the Keyboard Shortcuts editor">
+    Go to **File → Preferences → Keyboard Shortcuts** (Windows/Linux) or **Code → Settings → Keyboard Shortcuts** (macOS). You can also press `Ctrl+K Ctrl+S` / `Cmd+K Cmd+S`.
+  </Step>
+  <Step title="Open the JSON file">
+    Click the **Open Keyboard Shortcuts (JSON)** icon in the top-right corner of the Keyboard Shortcuts editor (the page icon with a small arrow). This opens `keybindings.json` directly.
+  </Step>
+  <Step title="Add your keybindings">
+    Paste or type your custom bindings into the JSON array. Save the file — VS Code applies the shortcuts immediately.
+  </Step>
+</Steps>
+
+## Example Custom Keybindings
+
+The following example assigns `Ctrl+Shift+A` to the preview command and `Ctrl+Shift+F` to the flowchart command. The `when` clause ensures the shortcuts only fire when a YAML file is active.
+
+```json
+[
+  {
+    "key": "ctrl+shift+a",
+    "command": "arazzo-vscode.openPreview",
+    "when": "resourceLangId == yaml"
+  },
+  {
+    "key": "ctrl+shift+f",
+    "command": "arazzo-vscode.openFlowchart",
+    "when": "resourceLangId == yaml"
+  }
+]
+```
+
+On macOS, replace `ctrl` with `cmd` if you prefer the standard macOS modifier key pattern (e.g., `"key": "cmd+shift+a"`).
+
+## Keybinding Reference
+
+| Command | Command ID | Suggested Key (Windows/Linux) | Suggested Key (macOS) |
+|---|---|---|---|
+| Open Arazzo Preview | `arazzo-vscode.openPreview` | `Ctrl+Shift+A` | `Cmd+Shift+A` |
+| Open Arazzo Flowchart | `arazzo-vscode.openFlowchart` | `Ctrl+Shift+F` | `Cmd+Shift+F` |
+
+Choose any key combination that does not conflict with your existing VS Code shortcuts. You can check for conflicts directly inside the Keyboard Shortcuts editor — VS Code highlights any bindings that overlap with existing commands.

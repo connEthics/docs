@@ -1,0 +1,195 @@
+---
+title: "Arazzo Specification File Structure and Required Fields"
+sidebarTitle: "File Structure"
+description: "Understand the top-level structure of an Arazzo YAML file, including the four required fields: arazzo, info, sourceDescriptions, and workflows."
+---
+
+Every Arazzo description is built around a small set of top-level fields. Four of them are required — `arazzo`, `info`, `sourceDescriptions`, and `workflows` — and together they give tooling everything it needs to understand which API you are describing, what version of the spec you are targeting, and what workflows you have defined. A fifth optional field, `components`, lets you define reusable building blocks that you can reference from multiple workflows.
+
+<Note>
+  The recommended filename for an entry Arazzo document is `arazzo.yaml` or `arazzo.json`. When you have multiple documents that reference each other, the file that contains the root `arazzo` field is called the entry Arazzo document.
+</Note>
+
+## Minimal Valid Example
+
+The snippet below shows the smallest valid Arazzo document — every required field is present, nothing more:
+
+```yaml
+arazzo: "1.0.1"
+info:
+  title: My API Workflow
+  version: 1.0.0
+sourceDescriptions:
+  - name: myApi
+    url: https://example.com/openapi.yaml
+    type: openapi
+workflows:
+  - workflowId: myFirstWorkflow
+    steps:
+      - stepId: firstStep
+        operationId: getSomething
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+## Top-Level Fields
+
+### `arazzo` (required)
+
+A string that declares the version of the Arazzo Specification the document conforms to. At the time of writing the supported values are `"1.0.0"` and `"1.0.1"`. The patch segment is treated as informational — tooling makes no behavioral distinction between the two.
+
+```yaml
+arazzo: "1.0.1"
+```
+
+### `info` (required)
+
+The `info` object provides human-readable metadata about the Arazzo description. Two of its sub-fields are required.
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `title` | ✅ | string | A human-readable title for the Arazzo description. |
+| `version` | ✅ | string | The version of this Arazzo document (not the spec version). |
+| `summary` | | string | A short, one-line summary of the description. |
+| `description` | | string | A longer description of the purpose of the workflows defined. Supports Markdown. |
+
+```yaml
+info:
+  title: Pet Store Purchase Workflow
+  summary: Demonstrates searching for and purchasing a pet
+  description: |
+    This description walks through the steps required to log in,
+    find an available pet, and place an order.
+  version: 1.0.0
+```
+
+### `sourceDescriptions` (required)
+
+An array of Source Description objects — the APIs (or other Arazzo descriptions) that your workflows will call into. There must be at least one entry. Each entry has the following fields:
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `name` | ✅ | string | A unique name used to reference this source from within workflow steps and runtime expressions. |
+| `url` | ✅ | string | A URL pointing to the source description document, such as an OpenAPI YAML file. |
+| `type` | | string | The kind of source description. Accepted values are `openapi` or `arazzo`. |
+
+```yaml
+sourceDescriptions:
+  - name: petStoreDescription
+    url: https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml
+    type: openapi
+  - name: authWorkflows
+    url: ./auth.arazzo.yaml
+    type: arazzo
+```
+
+The `name` you assign here becomes part of the runtime expression syntax for referencing that source: `$sourceDescriptions.petStoreDescription.url`.
+
+### `workflows` (required)
+
+An array of Workflow objects that define the sequences of API calls. At least one workflow must be present. Each workflow contains an ordered list of steps that are executed in sequence. See [Workflows & Steps](/arazzo/workflows-and-steps) for a full breakdown of all available fields.
+
+```yaml
+workflows:
+  - workflowId: loginUserAndRetrievePet
+    summary: Login and retrieve an available pet
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+      - stepId: getPetStep
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+### `components` (optional)
+
+The `components` object is a container for reusable definitions that you can reference from multiple workflows or steps. Defining something in `components` once and referencing it keeps your workflows DRY and consistent.
+
+| Sub-field | Description |
+|---|---|
+| `parameters` | Reusable Parameter objects referenced via `$components.parameters.<name>`. |
+| `successActions` | Reusable Success Action objects. |
+| `failureActions` | Reusable Failure Action objects. |
+| `schemas` | Reusable JSON Schema definitions. |
+| `inputs` | Reusable input schema definitions. |
+
+```yaml
+components:
+  parameters:
+    bearerAuth:
+      name: Authorization
+      in: header
+      value: $steps.loginStep.outputs.sessionToken
+```
+
+## Complete Pet Store Example
+
+The following is a full Arazzo description based on the official specification example. It logs in a user and then retrieves a list of available pets, passing the session token between the two steps:
+
+```yaml
+arazzo: "1.0.1"
+info:
+  title: A pet purchasing workflow
+  summary: This Arazzo Description showcases the workflow for how to purchase a pet through a sequence of API calls
+  description: |
+    This Arazzo Description walks you through the workflow and steps of
+    searching for, selecting, and purchasing an available pet.
+  version: 1.0.1
+sourceDescriptions:
+  - name: petStoreDescription
+    url: https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml
+    type: openapi
+workflows:
+  - workflowId: loginUserAndRetrievePet
+    summary: Login User and then retrieve pets
+    description: This workflow lays out the steps to login a user and then retrieve pets
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: loginStep
+        description: This step demonstrates the user login step
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          tokenExpires: $response.header.X-Expires-After
+          rateLimit: $response.header.X-Rate-Limit
+          sessionToken: $response.body
+      - stepId: getPetStep
+        description: Retrieve a pet by status from the GET pets endpoint
+        operationPath: "{$sourceDescriptions.petStoreDescription.url}#/paths/~1pet~1findByStatus/get"
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          availablePets: $response.body
+    outputs:
+      available: $steps.getPetStep.outputs.availablePets
+```

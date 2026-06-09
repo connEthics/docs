@@ -1,0 +1,91 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Arazzo VSCode",
+  "theme": "luma",
+  "favicon": "https://media.brand.dev/78633343-87bf-4208-9647-8fe699acaeb3.png",
+  "colors": {
+    "primary": "#de9924",
+    "light": "#364e6f",
+    "dark": "#b2c0cf"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/connEthics/arazzo-vscode"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/live-preview",
+              "features/flowchart",
+              "features/validation",
+              "features/autocompletion",
+              "features/outline-navigation"
+            ]
+          },
+          {
+            "group": "Arazzo Basics",
+            "pages": [
+              "arazzo/what-is-arazzo",
+              "arazzo/specification-structure",
+              "arazzo/workflows-and-steps",
+              "arazzo/runtime-expressions",
+              "arazzo/success-criteria"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-workflow",
+              "guides/multi-step-api",
+              "guides/workflow-dependencies",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/commands",
+              "reference/keyboard-shortcuts"
+            ]
+          },
+          {
+            "group": "Specification",
+            "pages": [
+              "reference/arazzo-object",
+              "reference/workflow-object",
+              "reference/step-object",
+              "reference/criterion-object"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "reference/changelog",
+              "reference/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

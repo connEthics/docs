@@ -1,0 +1,43 @@
+---
+title: "Navigate Arazzo Specifications with the Outline View"
+sidebarTitle: "Outline Navigation"
+description: "Use VS Code's built-in Outline view to navigate workflows, steps, and source descriptions by name across large Arazzo specification files."
+---
+
+The Outline view gives you a structured, collapsible tree of every named element in your Arazzo specification — workflows, steps, source descriptions, and all other root-level keys. Instead of scrolling through a long YAML file to find a specific workflow or step, you click its entry in the Outline panel and jump there directly. For large specifications with many workflows and dozens of steps, the Outline is the fastest way to navigate.
+
+## Opening the Outline
+
+The Outline panel is built into VS Code — no extra commands are needed to activate it:
+
+<Steps>
+  <Step title="Via the Explorer sidebar">
+    Open the Explorer sidebar (`Ctrl+Shift+E` / `Cmd+Shift+E`). Scroll to the bottom of the sidebar to find the **Outline** section. It expands automatically when you have a YAML file open.
+  </Step>
+  <Step title="Via the View menu">
+    Go to **View → Open View…**, type `Outline` in the search box, and select **Outline** from the list. This opens the Outline as a standalone panel that you can dock wherever you prefer.
+  </Step>
+</Steps>
+
+## What the Outline Contains
+
+The extension registers a document symbol provider that parses your Arazzo YAML and populates the Outline with meaningful, named entries rather than raw YAML keys:
+
+- **Workflows** — each entry in the `workflows` array appears in the Outline using its `workflowId` value as the label, making workflows immediately identifiable by name
+- **Steps** — each step within a workflow is listed under its parent workflow using the step's `stepId` as the label
+- **Source descriptions** — each entry in `sourceDescriptions` appears using its `name` field as the label
+- **Other root-level keys** — all remaining top-level keys (`arazzo`, `info`, `components`, etc.) are included in the tree so the complete document structure is always visible
+
+The tree is hierarchical: expanding a workflow node reveals its steps, and expanding a step reveals any nested keys within it.
+
+## Navigating with the Outline
+
+Click any symbol in the Outline panel to jump directly to its location in the editor. The editor scrolls to the corresponding line and places the cursor there. This works regardless of how deeply nested the symbol is — clicking a step under a workflow takes you straight to that step's definition.
+
+## Practical Tips for Large Specifications
+
+In a specification with many workflows, the Outline lets you collapse workflows you are not currently editing and focus on the one you are working on. Expanding only the relevant workflow node keeps the tree compact and reduces visual noise.
+
+<Tip>
+  Combine the Outline with the [Flowchart view](/features/flowchart) for complementary ways to navigate large specifications. The Outline gives you a precise, text-based tree you can scan and click through linearly, while the flowchart gives you a spatial diagram of how steps connect. Keeping both panels open lets you use whichever form of navigation fits your current task.
+</Tip>

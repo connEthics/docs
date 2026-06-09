@@ -1,0 +1,129 @@
+---
+title: "Context-Aware YAML Autocompletion for Arazzo Specs"
+sidebarTitle: "Autocompletion"
+description: "Arazzo VSCode provides intelligent YAML completions for Arazzo keywords, enum values, and runtime expressions including $steps, $inputs, and $response."
+---
+
+Arazzo VSCode provides context-aware autocompletion throughout your specification file. As you type, the extension detects which section of the document your cursor is in and offers the appropriate Arazzo keys, enum values, and runtime expressions as completions. This means you never have to remember the full list of valid fields for a workflow or a step — the extension surfaces exactly the right options for your current position.
+
+## Triggering Completions
+
+Use the standard VS Code completion shortcuts:
+
+- **`Ctrl+Space`** (macOS: `Ctrl+Space`) — manually trigger the completion list at any time
+- **Typing a colon (`:`)** — completions appear automatically after you type `:` at a key position
+- **Typing a space** — completions appear after a space following a colon, at a value position
+- **Typing `$`** — triggers runtime expression completions in value positions
+- **Typing `.`** — continues a runtime expression, for example after `$steps` or `$request.header`
+
+## Completions by Context
+
+The extension detects which part of the Arazzo document your cursor is in and adjusts the completion list accordingly.
+
+### Root-Level Keys
+
+When your cursor is at the top level of the document, the following keys are offered:
+
+```yaml
+arazzo
+info
+sourceDescriptions
+workflows
+components
+```
+
+### Info Keys
+
+Inside the `info` block:
+
+```yaml
+title
+version
+summary
+description
+```
+
+### Source Description Keys
+
+Inside a `sourceDescriptions` list entry:
+
+```yaml
+name
+url
+type
+```
+
+### Workflow Keys
+
+Inside a `workflows` list entry:
+
+```yaml
+workflowId
+summary
+description
+inputs
+dependsOn
+steps
+outputs
+parameters
+successActions
+failureActions
+```
+
+### Step Keys
+
+Inside a `steps` list entry:
+
+```yaml
+stepId
+description
+operationId
+operationPath
+workflowId
+parameters
+requestBody
+successCriteria
+onSuccess
+onFailure
+outputs
+```
+
+## Enum Value Completions
+
+For fields that accept a fixed set of values, the extension offers the valid options as completions:
+
+| Field | Context | Valid Values |
+|---|---|---|
+| `type` | Source description | `openapi`, `arazzo` |
+| `type` | Success / failure action | `goto`, `retry`, `end` |
+| `type` | Success criterion | `simple`, `regex`, `jsonpath`, `xpath` |
+
+## Runtime Expression Completions
+
+In value positions, the extension offers all standard Arazzo runtime expressions:
+
+```yaml
+$url
+$method
+$statusCode
+$request.header.
+$request.query.
+$request.body
+$response.header.
+$response.body
+$inputs.
+$outputs.
+$steps.
+```
+
+### Dynamic `$steps.` Resolution
+
+When you type `$steps.`, the extension reads your current document and resolves every `stepId` defined across all workflows. Those IDs are then offered as completions, so you can type `$steps.` and immediately pick the step you want to reference by name.
+
+<Tip>
+  Use the `$steps.` completion to reference step outputs in `successCriteria` conditions or downstream step parameters. Because the completions are read from your actual document, you get accurate step IDs without copying them by hand — which eliminates a common source of silent runtime errors caused by step ID typos.
+</Tip>
+
+## How Context Detection Works
+
+The extension scans upward from your cursor position to find the nearest YAML block header (`info:`, `sourceDescriptions:`, `workflows:`, `steps:`, etc.) at a lower indentation level. That determines your current context and selects the matching completion list. If no known block header is found, the extension falls back to offering root-level keys.

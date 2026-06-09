@@ -1,0 +1,105 @@
+{
+  "projectType": "saas",
+  "projectName": "Arazzo VSCode",
+  "projectDescription": "A Visual Studio Code extension for authoring, visualizing, and validating Arazzo API workflow specifications with live preview, flowchart diagrams, and real-time diagnostics.",
+  "theme": "luma",
+  "primaryColor": "#de9924",
+  "lightColor": "#364e6f",
+  "darkColor": "#b2c0cf",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/live-preview",
+              "features/flowchart",
+              "features/validation",
+              "features/autocompletion",
+              "features/outline-navigation"
+            ]
+          },
+          {
+            "group": "Arazzo Basics",
+            "pages": [
+              "arazzo/what-is-arazzo",
+              "arazzo/specification-structure",
+              "arazzo/workflows-and-steps",
+              "arazzo/runtime-expressions",
+              "arazzo/success-criteria"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-workflow",
+              "guides/multi-step-api",
+              "guides/workflow-dependencies",
+              "guides/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "reference/commands",
+              "reference/keyboard-shortcuts"
+            ]
+          },
+          {
+            "group": "Specification",
+            "pages": [
+              "reference/arazzo-object",
+              "reference/workflow-object",
+              "reference/step-object",
+              "reference/criterion-object"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "reference/changelog",
+              "reference/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Live documentation preview that refreshes as you type",
+    "Flowchart diagrams powered by Mermaid.js",
+    "Real-time validation with inline error diagnostics",
+    "Context-aware YAML autocompletion for Arazzo keywords",
+    "Outline navigation for workflows, steps, and components",
+    "Synchronized views — clicking a step in the flowchart scrolls to it in the preview",
+    "Multi-tab support for multiple specification files",
+    "VS Code theme integration (Light, Dark, High Contrast)",
+    "Zero telemetry — no usage data collected"
+  ],
+  "publicApiSurface": [
+    "Command: arazzo-vscode.openPreview — Open interactive documentation panel",
+    "Command: arazzo-vscode.openFlowchart — Open workflow diagram panel",
+    "Runtime expressions: $url, $method, $statusCode, $request.header., $request.query., $request.body, $response.header., $response.body, $inputs., $outputs., $steps.",
+    "Arazzo root keys: arazzo, info, sourceDescriptions, workflows, components",
+    "Workflow fields: workflowId, summary, description, inputs, dependsOn, steps, outputs, parameters, successActions, failureActions",
+    "Step fields: stepId, operationId, operationPath, workflowId, parameters, requestBody, successCriteria, onSuccess, onFailure, outputs",
+    "Criterion types: simple, regex, jsonpath, xpath",
+    "Source description types: openapi, arazzo",
+    "Supported Arazzo versions: 1.0.0, 1.0.1"
+  ]
+}

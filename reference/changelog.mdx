@@ -1,0 +1,59 @@
+---
+title: "Arazzo VSCode Changelog: Release Notes and Version History"
+sidebarTitle: "Changelog"
+description: "Full release history for Arazzo VSCode including new features, bug fixes, and improvements across every published version, listed newest first."
+---
+
+This page documents every release of the Arazzo VSCode extension, including new features, changes, and fixes. Releases are listed in reverse chronological order — newest first. You can always find the latest version on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=connethics.arazzo-vscode) or the [GitHub repository](https://github.com/connEthics/arazzo-vscode).
+
+---
+
+## v1.0.2 — 2026-02-23
+
+### Changed
+
+- **License:** The extension license has been updated to MIT, making it fully open-source.
+
+### Security
+
+- **No Telemetry:** This extension collects no telemetry, analytics, or usage data of any kind. Your files and activity remain entirely private.
+
+---
+
+## v0.0.3 — 2025-12-28
+
+### Added
+
+- **Synchronized Views:** Clicking a step node in the Flowchart view now automatically scrolls to the corresponding step entry in the Documentation (Preview) view. This makes it easier to navigate large workflows without losing context between panels.
+- **Marketplace Metadata:** Added VS Code Marketplace categories (`Programming Languages`, `Visualization`, `Linters`) and keywords (`arazzo`, `openapi`, `workflow`, `flowchart`, and more) to improve discoverability.
+
+---
+
+## v0.0.2 — 2025-12-28
+
+### Added
+
+#### Flowchart View
+
+- **New command:** `Open Arazzo Flowchart` — opens a dedicated webview panel that renders workflows as Mermaid.js diagrams.
+- **Auto-detection:** The panel automatically detects and renders the workflow corresponding to your current cursor position in the YAML editor.
+- **Manual workflow selector:** A dropdown in the panel lets you switch between workflows independently of your cursor position.
+- **Mermaid.js integration:** Workflows are rendered as clean, readable flowchart diagrams using the Mermaid.js library.
+
+#### Interactive Preview Panel
+
+- **Live preview:** The Documentation panel updates in real time as you edit your Arazzo YAML file.
+- **Multi-tab support:** You can open a Preview panel for each Arazzo document you have open simultaneously.
+- **Deep linking and navigation:** The panel includes a Table of Contents and step-to-step jump links for quickly navigating large specifications.
+- **Theme integration:** The panel respects your active VS Code color theme (light, dark, and high-contrast).
+
+---
+
+## v0.0.1
+
+### Added
+
+- **Initial release** of Arazzo VSCode.
+- **Outline navigation:** YAML document outline support for Arazzo file structure.
+- **Autocompletion:** IntelliSense completions for all Arazzo keys (`arazzo`, `info`, `sourceDescriptions`, `workflows`, `steps`, `successCriteria`, etc.) and runtime expression prefixes (`$statusCode`, `$response.body`, `$inputs.`, `$steps.`, and more).
+- **Validation:** Real-time diagnostic errors for invalid `dependsOn` references, unknown source description types, and duplicate `stepId` values within a workflow.

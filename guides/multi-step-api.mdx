@@ -1,0 +1,129 @@
+---
+title: "Build a Multi-Step API Workflow with Arazzo"
+sidebarTitle: "Multi-Step API"
+description: "Chain multiple API calls in a single Arazzo workflow, passing outputs from one step as inputs to the next using runtime expressions."
+---
+
+Most real-world API scenarios require more than one call. You might need to authenticate first, retrieve a resource ID, and then use that ID in a follow-up request. Arazzo handles this pattern natively: each step can capture values from the API response using `outputs`, and subsequent steps can reference those values using the `$steps.<stepId>.outputs.<name>` runtime expression. This guide shows you exactly how to wire two steps together so data flows from one API call to the next.
+
+## How step output chaining works
+
+When a step runs, Arazzo evaluates the expressions in its `outputs` map against the actual HTTP response. Each key in `outputs` becomes a named value that later steps can access using `$steps.<stepId>.outputs.<key>`.
+
+For example, if `loginStep` captures a session token:
+
+```yaml
+outputs:
+  sessionToken: $response.body
+```
+
+Then a later step can reference it with:
+
+```yaml
+value: "$steps.loginStep.outputs.sessionToken"
+```
+
+Arazzo VSCode provides autocompletion for `$steps.` references — press `Ctrl+Space` after typing `$steps.` to see all step IDs in the current workflow.
+
+## Complete example: login then fetch pets
+
+The following workflow authenticates a user, captures the session token, and then uses it as an API key header in a second API call.
+
+```yaml
+arazzo: "1.0.1"
+info:
+  title: Login and Fetch Pets
+  version: "1.0.0"
+sourceDescriptions:
+  - name: petstore
+    url: https://petstore3.swagger.io/api/v3/openapi.json
+    type: openapi
+workflows:
+  - workflowId: loginAndFetch
+    summary: Login then retrieve available pets
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: "$inputs.username"
+          - name: password
+            in: query
+            value: "$inputs.password"
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+
+      - stepId: getPetsStep
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: api_key
+            in: header
+            value: "$steps.loginStep.outputs.sessionToken"
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          pets: $response.body
+
+    outputs:
+      pets: "$steps.getPetsStep.outputs.pets"
+```
+
+## How the data flows
+
+<Steps>
+  <Step title="Step 1 — loginStep runs">
+    Arazzo calls the `loginUser` operation with the `username` and `password` inputs. The success criterion checks that the status code is 200. If it passes, the response body is captured as `sessionToken`.
+  </Step>
+  <Step title="Step 2 — getPetsStep runs">
+    Arazzo calls `findPetsByStatus`. The `api_key` header is populated with the value captured in step 1: `$steps.loginStep.outputs.sessionToken`. The response body is captured as `pets`.
+  </Step>
+  <Step title="Workflow outputs">
+    After both steps succeed, the workflow's own `outputs` exposes the `pets` value to any caller or dependent workflow.
+  </Step>
+</Steps>
+
+## Capturing specific fields with JSON Pointer
+
+To capture a specific field from the response body rather than the whole body, append a JSON Pointer:
+
+```yaml
+outputs:
+  userId: $response.body#/user/id
+  token: $response.body#/auth/token
+```
+
+This is useful when the response contains a large object and you only need a few values downstream.
+
+<Tip>
+  Arazzo VSCode autocompletes `$steps.` with the IDs of all steps defined in the current workflow. This makes wiring steps together fast and prevents typos in step references.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Workflow Dependencies" icon="sitemap" href="/guides/workflow-dependencies">
+    Compose multiple workflows with dependsOn
+  </Card>
+  <Card title="Runtime Expressions" icon="dollar-sign" href="/arazzo/runtime-expressions">
+    Full reference for all $steps, $inputs, $response expressions
+  </Card>
+  <Card title="Success Criteria" icon="circle-check" href="/arazzo/success-criteria">
+    Validate responses with assertions
+  </Card>
+  <Card title="Troubleshooting" icon="triangle-exclamation" href="/guides/troubleshooting">
+    Fix common validation errors
+  </Card>
+</CardGroup>

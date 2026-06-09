@@ -1,0 +1,68 @@
+---
+title: "Arazzo VSCode Commands: Open Preview and Flowchart"
+sidebarTitle: "Commands"
+description: "All VS Code commands provided by the Arazzo VSCode extension: Open Arazzo Preview and Open Arazzo Flowchart, with full usage details."
+---
+
+The Arazzo VSCode extension contributes two commands to VS Code. You can invoke either command from the editor title toolbar or the Command Palette, giving you quick access to the interactive preview and flowchart panels without leaving your editor.
+
+## Available Commands
+
+| Command Title | Command ID | Description |
+|---|---|---|
+| Open Arazzo Preview | `arazzo-vscode.openPreview` | Opens the interactive documentation panel for the active Arazzo YAML file |
+| Open Arazzo Flowchart | `arazzo-vscode.openFlowchart` | Opens the Mermaid.js flowchart diagram panel for the active Arazzo YAML file |
+
+---
+
+### Open Arazzo Preview
+
+**Command ID:** `arazzo-vscode.openPreview`
+
+The **Open Arazzo Preview** command opens a dedicated webview panel that renders your Arazzo specification as interactive documentation. The panel updates live as you type, supports multiple tabs (one per open Arazzo document), and integrates with your active VS Code color theme.
+
+**How to access:**
+
+- **Toolbar icon:** Click the preview (eye) icon in the editor title bar while a YAML file is open.
+- **Command Palette:** Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS), then type and select **Open Arazzo Preview**.
+
+**Behavior:**
+
+- If the active file is a valid Arazzo document (contains the `arazzo:` root key), the preview panel opens immediately.
+- If the active file is not recognized as an Arazzo document, the extension displays an informational message instead of opening the panel.
+
+---
+
+### Open Arazzo Flowchart
+
+**Command ID:** `arazzo-vscode.openFlowchart`
+
+The **Open Arazzo Flowchart** command opens a Mermaid.js-rendered flowchart diagram of your Arazzo workflows. The diagram automatically detects the active workflow based on your cursor position in the editor. You can also switch workflows manually using the workflow selector in the panel.
+
+**How to access:**
+
+- **Toolbar icon:** Click the graph icon in the editor title bar while a YAML file is open.
+- **Command Palette:** Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS), then type and select **Open Arazzo Flowchart**.
+
+**Behavior:**
+
+- The flowchart panel auto-detects which workflow to render based on where your cursor is positioned in the YAML file.
+- Clicking a step node in the flowchart scrolls to the corresponding step in the Documentation view (requires the Preview panel to also be open).
+- A manual workflow selector in the panel lets you switch between workflows independently of cursor position.
+
+---
+
+## Toolbar Placement
+
+Both commands appear as icon buttons in the **editor title run area** (the icon cluster to the right of the editor tab bar) whenever a YAML file is active. The icons are:
+
+| Icon | Command |
+|---|---|
+| `$(preview)` — eye/preview icon | Open Arazzo Preview |
+| `$(graph)` — graph/flowchart icon | Open Arazzo Flowchart |
+
+The toolbar buttons are always visible when a YAML file is open, even if it is not an Arazzo document. The extension performs the Arazzo check after you invoke the command.
+
+<Note>
+  Both commands require the active editor file to be recognized as an Arazzo document — that is, a YAML file whose root contains the `arazzo:` key. Opening either command on a plain YAML file that lacks this key will display an info message rather than launching the panel.
+</Note>

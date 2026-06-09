@@ -1,0 +1,224 @@
+---
+title: "Defining Workflows and Steps in Arazzo Specifications"
+sidebarTitle: "Workflows & Steps"
+description: "Learn how to define Arazzo workflows and steps, including operationId, operationPath, parameters, output mapping, and step chaining."
+---
+
+Workflows and steps are the heart of every Arazzo description. A workflow represents a complete, goal-oriented sequence of API interactions — logging in, finding a resource, placing an order. Each workflow is made up of an ordered list of steps, and each step represents a single API call or a call to another workflow. Steps pass data between each other through runtime expressions, turning a collection of isolated endpoint calls into a coordinated process.
+
+## Workflow Object
+
+A workflow defines the full sequence of steps required to achieve one outcome. Every workflow must have a unique `workflowId` and at least one step.
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `workflowId` | ✅ | string | A unique identifier for this workflow within the Arazzo description. Used to reference the workflow from other workflows or `dependsOn` lists. |
+| `summary` | | string | A short, human-readable description of the workflow's purpose or objective. |
+| `description` | | string | A longer explanation of the workflow. Supports Markdown. |
+| `inputs` | | JSON Schema object | A JSON Schema 2020-12 object defining the input parameters this workflow accepts. These become accessible via `$inputs.<name>` in steps. |
+| `dependsOn` | | array of strings | A list of `workflowId` values that must complete successfully before this workflow begins. |
+| `steps` | ✅ | array of Step objects | The ordered list of steps to execute. Must contain at least one step. |
+| `outputs` | | map | A map of friendly output names to runtime expressions. Lets the workflow expose values for other workflows to consume. |
+| `parameters` | | array of Parameter objects | Parameters that apply to every step in this workflow unless overridden at the step level. |
+| `successActions` | | array of Success Action objects | Success actions that apply to every step in this workflow unless overridden at the step level. |
+| `failureActions` | | array of Failure Action objects | Failure actions that apply to every step in this workflow unless overridden at the step level. |
+
+### Workflow Inputs
+
+You define workflow inputs as a JSON Schema object. Steps can then reference those values using the `$inputs.<name>` runtime expression:
+
+```yaml
+workflows:
+  - workflowId: searchAndOrder
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        desiredStatus:
+          type: string
+          default: available
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+```
+
+### Workflow Outputs
+
+Map friendly names to runtime expressions to expose values produced by the workflow's steps. Consuming workflows or tooling can then access these via `$workflows.<workflowId>.outputs.<name>`:
+
+```yaml
+    outputs:
+      accessToken: $steps.loginStep.outputs.sessionToken
+      availablePets: $steps.getPetStep.outputs.availablePets
+```
+
+## Step Object
+
+Each step in a workflow represents a single unit of work — usually an API call. Every step must have a unique `stepId` within its workflow, and exactly one of `operationId`, `operationPath`, or `workflowId` to identify what it calls.
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `stepId` | ✅ | string | A unique identifier for this step within the workflow. Used to reference the step's outputs via `$steps.<stepId>.outputs.<name>`. |
+| `operationId` | one of three | string | The `operationId` of an operation declared in one of the source descriptions. |
+| `operationPath` | one of three | string | A JSON Pointer reference to an operation, prefixed with the source description's URL. |
+| `workflowId` | one of three | string | The `workflowId` of another workflow to run as this step. |
+| `description` | | string | A human-readable description of what this step does. |
+| `parameters` | | array of Parameter objects | Parameters to pass to the operation or workflow. These merge with and override any workflow-level parameters. |
+| `requestBody` | | Request Body object | The request body to send with the API call. |
+| `successCriteria` | | array of Criterion objects | Conditions that must all pass for the step to be considered successful. See [Success Criteria](/arazzo/success-criteria). |
+| `onSuccess` | | array of Success Action objects | Actions to take when the step succeeds. |
+| `onFailure` | | array of Failure Action objects | Actions to take when the step fails. |
+| `outputs` | | map | A map of friendly output names to runtime expressions that capture values from the response. |
+
+<Warning>
+  Each step must declare exactly one of `operationId`, `operationPath`, or `workflowId`. Declaring more than one or none is a validation error. These three fields are mutually exclusive — you must choose exactly one per step.
+</Warning>
+
+### Targeting an Operation with `operationId`
+
+The most common way to target an operation is by its `operationId` — a string that matches the `operationId` field in your OpenAPI source description:
+
+```yaml
+- stepId: loginStep
+  operationId: loginUser
+```
+
+If you have multiple source descriptions, you can qualify the reference with the source name using dot notation:
+
+```yaml
+- stepId: loginStep
+  operationId: petStoreDescription.loginUser
+```
+
+### Targeting an Operation with `operationPath`
+
+When an operation does not have an `operationId`, or you want to be explicit about the source, you can reference it by its path within the source description document using a JSON Pointer:
+
+```yaml
+- stepId: getPetStep
+  operationPath: "{$sourceDescriptions.petStoreDescription.url}#/paths/~1pet~1findByStatus/get"
+```
+
+The `~1` in the JSON Pointer is the escaped form of `/`, required because forward slashes are path separators in JSON Pointer syntax.
+
+### Calling Another Workflow
+
+A step can call another workflow by referencing its `workflowId`. This composes smaller workflows into larger ones:
+
+```yaml
+- stepId: runAuthWorkflow
+  workflowId: loginUserAndRetrievePet
+  outputs:
+    token: $steps.runAuthWorkflow.outputs.accessToken
+```
+
+### Step Parameters
+
+Parameters in a step override or supplement parameters defined at the workflow level. Each parameter requires a `name`, an `in` value (the location: `query`, `header`, `path`, `cookie`, or `body`), and a `value` — which can be a static value or a runtime expression:
+
+```yaml
+parameters:
+  - name: status
+    in: query
+    value: available
+  - name: Authorization
+    in: header
+    value: $steps.loginStep.outputs.sessionToken
+```
+
+### Step Outputs
+
+Use the `outputs` map to capture values from the response and give them friendly names. Any subsequent step in the same workflow can then reference those values via `$steps.<stepId>.outputs.<name>`:
+
+```yaml
+outputs:
+  sessionToken: $response.body
+  tokenExpiry: $response.header.X-Expires-After
+  rateLimit: $response.header.X-Rate-Limit
+```
+
+## Complete Multi-Step Workflow Example
+
+The following example demonstrates a full workflow with three steps: logging in, finding an available pet, and placing an order. Each step builds on the outputs of its predecessors:
+
+```yaml
+arazzo: "1.0.1"
+info:
+  title: Pet Store Purchase Workflow
+  version: 1.0.0
+sourceDescriptions:
+  - name: petStoreDescription
+    url: https://example.com/petstore/openapi.yaml
+    type: openapi
+workflows:
+  - workflowId: purchasePet
+    summary: Log in, find an available pet, and place an order
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: loginStep
+        description: Authenticate the user and retrieve a session token
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+          tokenExpiry: $response.header.X-Expires-After
+
+      - stepId: findPetStep
+        description: Retrieve a list of pets with status "available"
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          firstPetId: $response.body#/0/id
+          availablePets: $response.body
+
+      - stepId: placeOrderStep
+        description: Place an order for the first available pet
+        operationId: placeOrder
+        parameters:
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        requestBody:
+          payload:
+            petId: $steps.findPetStep.outputs.firstPetId
+            quantity: 1
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          orderId: $response.body#/id
+
+    outputs:
+      confirmedOrderId: $steps.placeOrderStep.outputs.orderId
+```

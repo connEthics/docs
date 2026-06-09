@@ -1,0 +1,134 @@
+---
+title: "Arazzo Success Criteria: Assertions for Workflow Steps"
+sidebarTitle: "Success Criteria"
+description: "Define success criteria for Arazzo workflow steps using simple, regex, JSONPath, and XPath criterion types to validate API responses."
+---
+
+Success criteria are the assertions that determine whether an Arazzo step succeeded or failed. Every step can carry a `successCriteria` list, and every condition in that list must pass for the step to be considered successful. If any condition fails, the step is treated as failed and any configured `onFailure` actions are triggered. This gives you precise control over what "success" means for each step — not just "did the server respond" but "did it respond with the right status code, the right body structure, and the right header values."
+
+## How Success Criteria Work
+
+Each item in the `successCriteria` array is a Criterion object. A criterion evaluates a condition against a value, which can come from the response status code, body, headers, or any other runtime expression. All criteria in the list use implicit AND logic — every single one must evaluate to `true` for the step to succeed.
+
+A criterion has three fields:
+
+| Field | Required | Type | Description |
+|---|---|---|---|
+| `condition` | ✅ | string | The expression or pattern to evaluate. For `simple` criteria this is a comparison expression; for `regex`, `jsonpath`, and `xpath` it is the pattern or query. |
+| `context` | | runtime expression | The value to evaluate the condition against. Defaults to the overall response context when omitted. |
+| `type` | | string | The evaluation type. One of `simple`, `regex`, `jsonpath`, or `xpath`. Defaults to `simple` when not specified. |
+
+## Criterion Types
+
+| Type | Description | When to Use |
+|---|---|---|
+| `simple` | Evaluates a direct comparison expression using a runtime expression, such as `$statusCode == 200`. This is the default when `type` is omitted. | Checking status codes, comparing a specific field to a known value, or any straightforward equality or inequality check. |
+| `regex` | Matches the `context` value against a regular expression pattern in `condition`. | Validating response headers, checking token formats, or confirming a field matches a known pattern. |
+| `jsonpath` | Evaluates a JSONPath query in `condition` against the value pointed to by `context`. | Querying into nested response bodies, checking array elements, or filtering object properties. |
+| `xpath` | Evaluates an XPath expression in `condition` against an XML response. | Working with XML or SOAP APIs. |
+
+## Examples of Each Criterion Type
+
+```yaml
+successCriteria:
+  # Simple status check (default type — no `type` field needed)
+  - condition: $statusCode == 200
+
+  # Simple check on a response body field
+  - condition: $response.body#/status == 'active'
+
+  # JSONPath check — evaluate a JSONPath query against the response body
+  - condition: $.status == 'active'
+    context: $response.body
+    type: jsonpath
+
+  # JSONPath check on a nested array element
+  - condition: $.pets[0].available == true
+    context: $response.body
+    type: jsonpath
+
+  # Regex check — confirm the Authorization header begins with "Bearer"
+  - condition: ^Bearer
+    context: $response.header.Authorization
+    type: regex
+
+  # Regex check — confirm an order ID matches a known format
+  - condition: ^ORD-[0-9]{6}$
+    context: $response.body#/orderId
+    type: regex
+
+  # XPath check — confirm an XML response body contains the expected element
+  - condition: //status[text()='confirmed']
+    context: $response.body
+    type: xpath
+```
+
+## A Step with Multiple Criteria
+
+You can stack as many criteria as you need. All of them must pass. This example confirms the status code, checks that the response body contains a non-empty token, and verifies the content type header:
+
+```yaml
+steps:
+  - stepId: loginStep
+    operationId: loginUser
+    parameters:
+      - name: username
+        in: query
+        value: $inputs.username
+      - name: password
+        in: query
+        value: $inputs.password
+    successCriteria:
+      - condition: $statusCode == 200
+      - condition: $.token != ''
+        context: $response.body
+        type: jsonpath
+      - condition: ^application/json
+        context: $response.header.Content-Type
+        type: regex
+    outputs:
+      sessionToken: $response.body#/token
+```
+
+## Using `onSuccess` and `onFailure` Actions
+
+<Info>
+  Each step can define `onSuccess` and `onFailure` action lists that run depending on whether the step's success criteria pass or fail. A Success Action can instruct the workflow to continue to the next step, jump to a specific step, or end the workflow entirely. A Failure Action can retry the step, jump to a recovery step, or terminate the workflow with an error. Workflow-level `successActions` and `failureActions` apply to all steps in the workflow unless a step overrides them.
+</Info>
+
+```yaml
+steps:
+  - stepId: loginStep
+    operationId: loginUser
+    successCriteria:
+      - condition: $statusCode == 200
+    onSuccess:
+      - name: proceedToSearch
+        type: goto
+        stepId: findPetStep
+    onFailure:
+      - name: retryLogin
+        type: retry
+        retryAfter: 1
+        retryLimit: 3
+    outputs:
+      sessionToken: $response.body
+
+  - stepId: findPetStep
+    operationId: findPetsByStatus
+    parameters:
+      - name: status
+        in: query
+        value: available
+      - name: Authorization
+        in: header
+        value: $steps.loginStep.outputs.sessionToken
+    successCriteria:
+      - condition: $statusCode == 200
+      - condition: $.length > 0
+        context: $response.body
+        type: jsonpath
+    onFailure:
+      - name: noResultsEnd
+        type: end
+```

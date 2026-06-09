@@ -1,0 +1,112 @@
+---
+title: "Arazzo Workflow Object Reference: Fields and Usage Guide"
+sidebarTitle: "Workflow Object"
+description: "Full reference for the Arazzo Workflow Object: workflowId, steps, inputs, outputs, dependsOn, parameters, and workflow-level success and failure actions."
+---
+
+A Workflow Object represents a named, ordered sequence of API calls designed to accomplish a specific goal. Each workflow lives inside the top-level `workflows` array of an Arazzo document and must contain at least one step. Workflows can accept typed inputs, declare dependencies on other workflows, and expose outputs that downstream workflows or steps can consume via runtime expressions.
+
+## Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `workflowId` | string | ✅ Yes | A unique identifier for this workflow within the document. Must not contain spaces. Used in `dependsOn` references and `$steps.*` expressions. |
+| `summary` | string | No | A short, human-readable summary of the workflow's purpose, shown in the Preview panel. |
+| `description` | string | No | A detailed description of what this workflow does. Supports Markdown. |
+| `inputs` | JSON Schema object | No | A JSON Schema 2020-12 object that describes the input parameters the workflow accepts. Consumed via `$inputs.*` runtime expressions within steps. |
+| `dependsOn` | array of strings | No | A list of `workflowId` values that must complete successfully before this workflow can be executed. The extension validates that every referenced ID exists in the document. |
+| `steps` | array of Step Objects | ✅ Yes | An ordered list of steps representing individual API calls or sub-workflow invocations. |
+| `successActions` | array of Success Action Objects | No | Default success actions applied to every step in this workflow unless overridden by a step's own `onSuccess` array. |
+| `failureActions` | array of Failure Action Objects | No | Default failure actions applied to every step in this workflow unless overridden by a step's own `onFailure` array. |
+| `outputs` | map (string → runtime expression) | No | Named outputs computed from step results. Keys are friendly output names; values are runtime expressions (e.g., `$steps.someStep.outputs.token`). |
+| `parameters` | array of Parameter Objects | No | Parameters shared across all steps in this workflow. Individual steps can override these values. |
+
+### `workflowId`
+
+The `workflowId` is the primary identifier for a workflow. It must be unique across all workflows in the document. Other workflows reference it in their `dependsOn` arrays, and steps that call sub-workflows reference it via the step's `workflowId` field. The extension validates that every `dependsOn` entry resolves to a real workflow ID and reports an error in the Problems panel if it does not.
+
+### `inputs`
+
+The `inputs` field accepts a standard JSON Schema object that describes what parameters callers must or may supply when triggering the workflow. Inside steps, you access input values through the `$inputs.<fieldName>` runtime expression.
+
+### `dependsOn`
+
+Use `dependsOn` to express that a workflow must not begin until one or more other workflows have completed. The value is an array of `workflowId` strings. Arazzo VSCode validates each entry and highlights any ID that does not match a workflow defined in the same document.
+
+### `successActions` and `failureActions`
+
+These arrays define default behavior for all steps in the workflow. A step's own `onSuccess` or `onFailure` array takes precedence over the workflow-level defaults when both are present. Common action types are `goto`, `retry`, and `end`.
+
+### `outputs`
+
+Workflow outputs aggregate results from individual steps and expose them for use by dependent workflows. The key is a plain string name; the value is a runtime expression that resolves at execution time — for example, `$steps.loginStep.outputs.sessionToken`.
+
+---
+
+## YAML Example
+
+The following example shows a complete workflow with inputs, two steps, and outputs:
+
+```yaml
+workflows:
+  - workflowId: loginAndFetchOrders
+    summary: Authenticate a user and retrieve their orders
+    description: |
+      This workflow logs in a user with username and password credentials,
+      then fetches the list of orders associated with that account.
+    inputs:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: The user's login name
+        password:
+          type: string
+          description: The user's password
+    dependsOn:
+      - setupEnvironmentWorkflow
+    parameters:
+      - name: Accept
+        in: header
+        value: application/json
+    steps:
+      - stepId: loginStep
+        description: Authenticate the user and obtain a session token
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+      - stepId: fetchOrdersStep
+        description: Retrieve all orders for the authenticated user
+        operationId: getUserOrders
+        parameters:
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          orders: $response.body
+    successActions:
+      - name: proceedToSummary
+        type: goto
+        workflowId: orderSummaryWorkflow
+    failureActions:
+      - name: retryOnFailure
+        type: retry
+        retryAfter: 2
+        retryLimit: 3
+    outputs:
+      userOrders: $steps.fetchOrdersStep.outputs.orders
+```

@@ -1,0 +1,52 @@
+---
+title: "Interactive Flowchart Diagrams for Arazzo Workflows"
+sidebarTitle: "Flowchart View"
+description: "Visualize Arazzo workflows as interactive Mermaid.js flowcharts. Auto-syncs with your cursor position and links back to your editor."
+---
+
+The Flowchart view renders each Arazzo workflow as an interactive diagram powered by [Mermaid.js](https://mermaid.js.org/). Every step in your workflow becomes a node, and the relationships between steps — including `onSuccess`, `onFailure`, and `dependsOn` transitions — are drawn as directional edges. As you edit your YAML, the diagram updates in real time, giving you a continuously accurate picture of your API workflow's structure.
+
+## Opening the Flowchart
+
+You can open the Flowchart view in two ways:
+
+<Steps>
+  <Step title="Toolbar icon">
+    Open an Arazzo YAML file in the editor. Click the **graph / flowchart icon** that appears in the top-right corner of the editor toolbar.
+  </Step>
+  <Step title="Command Palette">
+    Press `Ctrl+Shift+P` (macOS: `Cmd+Shift+P`) to open the Command Palette, then run:
+    ```
+    Open Arazzo Flowchart
+    ```
+  </Step>
+</Steps>
+
+The flowchart panel opens beside your editor. You can keep it open while you write and the diagram will stay in sync.
+
+## Features
+
+### Auto-Sync with Cursor Position
+
+The flowchart panel tracks your cursor position in the YAML editor. When you move your cursor into a different workflow's block, the diagram automatically switches to display that workflow. You do not need to manually select a workflow while navigating — the view follows you.
+
+### Click-to-Navigate
+
+Every step node in the diagram is interactive. Clicking a step node sends a navigation signal to both the YAML editor and the [Live Preview panel](/features/live-preview):
+
+- The **editor** scrolls to the line where that step is defined
+- The **preview panel** (if open) scrolls to that step's documentation section
+
+This bidirectional linking means you can use the flowchart as a visual navigation tool — click the step you want to inspect and both text views jump to it instantly.
+
+### Manual Workflow Selector
+
+If your specification defines more than one workflow, the flowchart panel provides a **dropdown selector** at the top of the panel. Use it to switch between workflows manually when you want to view a specific diagram regardless of where your cursor is in the editor.
+
+### Real-Time Diagram Updates
+
+The diagram re-renders every time the underlying YAML changes. Add a step, change a transition condition, or rename a workflow — the flowchart reflects the current state of your specification without any manual refresh.
+
+<Tip>
+  Open the Flowchart view and the [Live Preview](/features/live-preview) side by side in separate editor columns alongside your YAML. This three-panel layout gives you the diagram for spatial orientation, the rendered documentation for step details, and the raw YAML for editing — all visible at once.
+</Tip>

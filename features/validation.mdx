@@ -1,0 +1,79 @@
+---
+title: "Real-Time Validation for Your Arazzo Specification Files"
+sidebarTitle: "Validation"
+description: "Arazzo VSCode validates your specification as you type, showing inline errors for YAML syntax issues, missing fields, invalid references, and more."
+---
+
+Arazzo VSCode validates your specification continuously as you edit. Every change you make triggers a fresh round of checks, and any issues found are surfaced immediately as inline squiggle markers in the editor and as entries in the VS Code **Problems** panel (`Ctrl+Shift+M` / `Cmd+Shift+M`). You catch structural mistakes, missing required fields, and invalid references before they ever reach your API pipeline.
+
+<Note>
+  Validation only runs on YAML files that contain an `arazzo:` key at the root level. Files that do not have this key are silently ignored — no diagnostics are produced and the Problems panel remains clean for those files.
+</Note>
+
+## What Gets Validated
+
+### 1. YAML Syntax Errors
+
+The extension parses your file with a strict YAML parser. Indentation errors, duplicate keys, unquoted special characters, and other low-level syntax problems are reported as errors before any Arazzo-specific checks run.
+
+### 2. Required Fields
+
+Arazzo has a set of fields that must be present for a specification to be structurally valid. The extension checks:
+
+- `arazzo` — the version field must exist at the root level
+- `info.title` and `info.version` — both must be present under the `info` block
+- `sourceDescriptions` — the array must exist and contain at least one entry
+- Each workflow must have a `workflowId` and a non-empty `steps` array
+- Each step must have a `stepId`
+
+### 3. Step Operation Mutual Exclusivity
+
+Each step must reference exactly one of the following operation targets:
+
+- `operationId`
+- `operationPath`
+- `workflowId`
+
+Providing zero of these fields is an error. Providing more than one is also an error — these fields are mutually exclusive. The extension flags both cases on the offending step.
+
+### 4. Reference Validation
+
+If a workflow uses `dependsOn` to declare dependencies on other workflows, the extension verifies that every referenced `workflowId` actually exists within the same document. References to non-existent workflow IDs are reported as errors.
+
+### 5. Source Type Validation
+
+Each entry in `sourceDescriptions` has a `type` field. The only valid values are `openapi` and `arazzo`. Any other value — including casing variants like `OpenAPI` — is reported as an error.
+
+### 6. Duplicate Step ID Detection
+
+Within a single workflow, every `stepId` must be unique. The extension detects duplicate step IDs and reports an error on each duplicated entry.
+
+### 7. Version Check
+
+The `arazzo:` field at the root declares the specification version. If the value is not a recognized Arazzo version (`1.0.0` or `1.0.1`), the extension reports a warning so you can confirm whether you intended an unrecognized version string.
+
+## Validation Rules Reference
+
+| Rule | Severity | Triggered When |
+|---|---|---|
+| YAML syntax | Error | The file contains invalid YAML |
+| Missing `arazzo` version | Error | The root `arazzo:` key is absent |
+| Missing `info.title` | Error | `info.title` is not defined |
+| Missing `info.version` | Error | `info.version` is not defined |
+| Missing `sourceDescriptions` | Error | The `sourceDescriptions` array is absent or empty |
+| Missing `workflowId` | Error | A workflow entry has no `workflowId` |
+| Missing `steps` | Error | A workflow entry has no `steps` array |
+| Missing `stepId` | Error | A step entry has no `stepId` |
+| Step operation absent | Error | A step has none of `operationId`, `operationPath`, or `workflowId` |
+| Step operation conflict | Error | A step has more than one of `operationId`, `operationPath`, or `workflowId` |
+| Unknown `dependsOn` workflow | Error | A `dependsOn` entry references a `workflowId` that does not exist in the document |
+| Invalid source `type` | Error | A source description `type` is not `openapi` or `arazzo` |
+| Duplicate `stepId` | Error | Two or more steps in the same workflow share the same `stepId` |
+| Unrecognized Arazzo version | Warning | The `arazzo:` version value is not `1.0.0` or `1.0.1` |
+
+## Where Errors Appear
+
+Validation results surface in two places simultaneously:
+
+- **Inline squiggles** — red underlines (errors) and yellow underlines (warnings) appear directly on the relevant line or token in your YAML editor
+- **Problems panel** — every diagnostic is listed in the VS Code Problems panel with the file name, line number, and message. Open it with `Ctrl+Shift+M` (macOS: `Cmd+Shift+M`) or by clicking the error/warning count in the status bar

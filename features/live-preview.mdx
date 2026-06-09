@@ -1,0 +1,64 @@
+---
+title: "Live Documentation Preview for Arazzo Specifications"
+sidebarTitle: "Live Preview"
+description: "View your Arazzo specification as interactive documentation in real time, side-by-side with your code. Updates instantly as you type."
+---
+
+The Live Preview panel renders your Arazzo YAML specification as fully interactive documentation right inside VS Code. As you write and edit your spec, the panel refreshes automatically — no manual saves, no browser reloads, no context switching. You see your workflows, steps, parameters, and success criteria formatted as readable documentation the moment you type them.
+
+## Opening the Preview
+
+You can open the Live Preview in two ways:
+
+<Steps>
+  <Step title="Toolbar icon">
+    Open an Arazzo YAML file in the editor. Click the **eye / preview icon** that appears in the top-right corner of the editor toolbar.
+  </Step>
+  <Step title="Command Palette">
+    Press `Ctrl+Shift+P` (macOS: `Cmd+Shift+P`) to open the Command Palette, then run:
+    ```
+    Open Arazzo Preview
+    ```
+  </Step>
+</Steps>
+
+The preview panel opens in a side-by-side column so your YAML and the rendered documentation are visible at the same time.
+
+<Note>
+  If the preview panel displays a message saying "This file is not an Arazzo specification document", your YAML file is missing the `arazzo:` key at the root level. The extension uses that key to identify Arazzo documents. Make sure your file starts with a root-level `arazzo:` field — for example, `arazzo: "1.0.1"`.
+</Note>
+
+## What the Preview Shows
+
+The panel renders every section of your specification in a structured, human-readable layout:
+
+- **Spec metadata** — the Arazzo version, `info.title`, `info.version`, and `info.description` displayed as a header block
+- **Source descriptions** — each entry in `sourceDescriptions`, including its `name`, `url`, and `type`
+- **Workflow list** — all workflows defined in `workflows`, each identified by its `workflowId` and optional `summary`
+- **Step details** — for every step within a workflow: `stepId`, `operationId` or `operationPath`, input parameters, success criteria, `onSuccess` / `onFailure` actions, and step outputs
+
+## Features
+
+### Real-Time Updates
+
+The preview re-renders on every keystroke. There is no debounce delay that would cause the panel to fall out of sync — edits appear in the documentation view as you type them.
+
+### Multi-Tab Support
+
+Each Arazzo file you open gets its own independent preview tab. If you have three spec files open, you can run `Open Arazzo Preview` on each one and keep three live preview panels active at the same time.
+
+<Tip>
+  If you are working on a suite of related Arazzo specs — for example a primary workflow file and a referenced component file — open a preview for each one and arrange them in separate VS Code editor groups. This lets you keep every spec's documentation visible simultaneously without switching tabs.
+</Tip>
+
+### VS Code Theme-Aware
+
+The preview panel inherits your active VS Code color theme. It adapts to **Light**, **Dark**, and **High Contrast** themes automatically, so the documentation always matches the rest of your editor environment.
+
+### Interactive Table of Contents and Navigation
+
+The preview includes a Table of Contents sidebar that lists every workflow. Click any workflow entry to jump directly to that section of the documentation. Within a workflow, step headings are also clickable, letting you navigate large multi-workflow specifications without scrolling.
+
+### Deep Linking
+
+Individual steps generate anchor links within the preview. When another panel — such as the [Flowchart view](/features/flowchart) — sends a "scroll to step" message, the preview panel navigates directly to that step's section. This cross-panel linking means clicking a node in the flowchart takes you to the matching step in both the editor and the preview simultaneously.

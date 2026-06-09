@@ -1,0 +1,100 @@
+---
+title: "What Is Arazzo? Multi-Step API Workflow Specifications"
+sidebarTitle: "What Is Arazzo"
+description: "Arazzo is an OpenAPI Initiative specification for describing multi-step API workflows. Learn what problems it solves and how it relates to OpenAPI."
+---
+
+Arazzo is an open specification maintained by the OpenAPI Initiative that lets you describe sequences of API calls and the dependencies between them. Where a traditional OpenAPI description tells you what individual endpoints exist and how to call them in isolation, Arazzo lets you express *how those endpoints work together* to achieve a real-world goal — things like signing in, searching for a product, and completing a purchase in a single coherent workflow.
+
+<Info>
+  Arazzo VSCode supports Arazzo versions 1.0.0 and 1.0.1.
+</Info>
+
+## The Problem Arazzo Solves
+
+An OpenAPI description is excellent at documenting individual operations: the paths, parameters, request bodies, and response shapes of each endpoint. What it cannot express, however, is the *story* of your API — the ordered sequence of calls a consumer must make, and the data that flows from one call into the next.
+
+Consider a simple e-commerce scenario:
+
+1. **Login** — call `POST /login` with credentials and receive a session token.
+2. **Search** — call `GET /pets?status=available`, passing the session token as a header.
+3. **Purchase** — call `POST /orders`, using the pet ID retrieved from the previous search.
+
+Each step depends on the output of the one before it. A standalone OpenAPI file describes each of these three operations perfectly, but it says nothing about their relationship, their ordering, or how the `sessionToken` from step one becomes the `Authorization` header in step two. Arazzo fills exactly that gap.
+
+## How Arazzo Relates to OpenAPI
+
+Arazzo does not replace OpenAPI — it builds on top of it. An Arazzo description references one or more existing API descriptions (called *source descriptions*) and calls the operations defined within them. You point Arazzo at your OpenAPI file, and then your workflows reference the `operationId` values already declared there.
+
+This means you can add Arazzo to an existing API without modifying your OpenAPI description at all. Arazzo also supports referencing other Arazzo descriptions as source descriptions, enabling workflows that span multiple APIs or compose smaller workflow definitions into larger ones.
+
+## Versions and Format
+
+The current versions of the Arazzo Specification are **1.0.0** and **1.0.1**. The `major.minor` portion of the version number (`1.0`) identifies the feature set; patch releases like `1.0.1` address clarifications and corrections only, so tooling treats `1.0.0` and `1.0.1` as equivalent.
+
+Arazzo descriptions are JSON objects that you can write in either **YAML** (recommended for readability) or **JSON**. The recommended filename for an entry Arazzo document is `arazzo.yaml` or `arazzo.json`.
+
+## A Simple Three-Step Workflow
+
+At its most basic, an Arazzo file names its source API, defines a workflow, and lists the steps in order. Each step targets a specific operation, passes the required parameters, and can capture values from the response for use in subsequent steps:
+
+```yaml
+arazzo: "1.0.1"
+info:
+  title: Pet Store Purchase Workflow
+  version: 1.0.0
+sourceDescriptions:
+  - name: petStoreDescription
+    url: https://example.com/petstore/openapi.yaml
+    type: openapi
+workflows:
+  - workflowId: purchasePet
+    summary: Log in, find an available pet, and place an order
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+
+      - stepId: findPetStep
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          firstPetId: $response.body#/0/id
+
+      - stepId: placeOrderStep
+        operationId: placeOrder
+        parameters:
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        requestBody:
+          payload:
+            petId: $steps.findPetStep.outputs.firstPetId
+            quantity: 1
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+The three steps run in order, the session token captured in `loginStep` flows into the `Authorization` header of the next two steps, and the pet ID found in `findPetStep` is passed directly into the order body. You'll learn about each of these building blocks in the pages that follow.
+
+## Official Specification
+
+The full Arazzo Specification is published and maintained by the OpenAPI Initiative. You can read the complete reference at [spec.openapis.org/arazzo/latest.html](https://spec.openapis.org/arazzo/latest.html).

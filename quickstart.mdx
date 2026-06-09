@@ -1,0 +1,81 @@
+---
+title: "Quickstart: Get Started with Arazzo VSCode in VS Code"
+sidebarTitle: "Quickstart"
+description: "Open your first Arazzo specification in VS Code, preview it as interactive docs, and visualize your API workflow as a flowchart in 5 minutes."
+---
+
+This guide walks you through opening your first Arazzo specification with Arazzo VSCode, launching the live documentation preview, and generating a flowchart diagram — all in about five minutes. By the end you will have seen the full edit-preview-diagram loop that makes Arazzo VSCode useful every day.
+
+<Steps>
+  <Step title="Install the extension">
+    If you have not already installed Arazzo VSCode, follow the [Installation guide](/installation) to add it from the VS Code Extensions panel or the Visual Studio Marketplace. The extension requires VS Code 1.90.0 or newer and activates automatically for YAML files.
+  </Step>
+  <Step title="Create or open an Arazzo YAML file">
+    Create a new file called `petstore-workflow.yaml` and paste in the following minimal Arazzo specification. This example defines a single workflow that retrieves a pet from the Petstore API by ID.
+
+    ```yaml
+    arazzo: "1.0.1"
+    info:
+      title: Pet Store Workflow
+      version: "1.0.0"
+    sourceDescriptions:
+      - name: petstore
+        url: https://petstore3.swagger.io/api/v3/openapi.json
+        type: openapi
+    workflows:
+      - workflowId: getPetById
+        summary: Retrieve a pet by ID
+        steps:
+          - stepId: fetchPet
+            operationId: getPetById
+            parameters:
+              - name: petId
+                in: path
+                value: "$inputs.petId"
+            successCriteria:
+              - condition: $statusCode == 200
+            outputs:
+              pet: $response.body
+    ```
+
+    Save the file. You will notice autocompletion suggestions as you type and any structural errors will appear as inline diagnostic markers immediately.
+  </Step>
+  <Step title="Open the Arazzo Preview">
+    Click the **eye icon** (preview) in the editor toolbar at the top right of the file, or open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run:
+
+    ```text
+    Open Arazzo Preview
+    ```
+
+    A documentation panel opens beside your editor, rendering your specification as interactive documentation. The panel adapts to your VS Code theme and updates on every keystroke — no save required.
+  </Step>
+  <Step title="Open the Flowchart">
+    Click the **graph icon** in the editor toolbar, or run the following command from the Command Palette:
+
+    ```text
+    Open Arazzo Flowchart
+    ```
+
+    A Mermaid-powered flowchart diagram opens, showing the steps in your `getPetById` workflow as connected nodes. The diagram auto-syncs to whichever workflow your cursor is inside, and you can click any step node to jump to that step in both the editor and the preview panel.
+  </Step>
+  <Step title="Edit your YAML and watch everything update">
+    Go back to your YAML file and make a change — for example, add a second step under `steps`:
+
+    ```yaml
+          - stepId: handleError
+            operationId: getPetById
+            successCriteria:
+              - condition: $statusCode == 404
+    ```
+
+    Switch back to the Preview and Flowchart panels. Both update in real time as you type, so you always see an accurate picture of your current specification without any manual refresh.
+  </Step>
+</Steps>
+
+## Next steps
+
+Now that you have seen the core workflow, explore the individual feature pages to learn about multi-tab support, click-to-navigate in the flowchart, and the full scope of validation rules.
+
+<Tip>
+  Want to try Arazzo without installing anything? Open the **[online playground](https://arazzo.connethics.com/)** in your browser — it provides the same live preview and flowchart experience and is a great way to experiment with the specification syntax before committing it to a file.
+</Tip>

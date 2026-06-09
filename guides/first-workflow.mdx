@@ -1,0 +1,139 @@
+---
+title: "Write Your First Arazzo API Workflow in VS Code"
+sidebarTitle: "First Workflow"
+description: "Create, preview, and visualize your first Arazzo workflow specification in VS Code step by step, from blank file to rendered flowchart."
+---
+
+Creating your first Arazzo workflow takes just a few minutes. This guide walks you through building a complete specification file from scratch, opening the interactive documentation preview, and seeing your workflow rendered as a flowchart — all without leaving VS Code. By the end, you will have a working Arazzo YAML file and a clear picture of how the extension's views work together.
+
+## Build your first workflow
+
+<Steps>
+  <Step title="Create a new YAML file">
+    Open VS Code and create a new file named `my-workflow.arazzo.yaml`. Any `.yaml` extension works — the extension detects Arazzo documents automatically by checking for the `arazzo:` key.
+  </Step>
+
+  <Step title="Add the required skeleton">
+    Paste this minimal skeleton to establish all four required top-level sections:
+
+    ```yaml
+    arazzo: "1.0.1"
+    info:
+      title: My First Workflow
+      version: "1.0.0"
+    sourceDescriptions: []
+    workflows: []
+    ```
+
+    The extension will immediately show validation errors for the empty arrays — that is expected. You will fill them in the next steps.
+  </Step>
+
+  <Step title="Add a source description">
+    Replace `sourceDescriptions: []` with a reference to a real OpenAPI spec. Use the public Swagger Petstore for this example:
+
+    ```yaml
+    sourceDescriptions:
+      - name: petstore
+        url: https://petstore3.swagger.io/api/v3/openapi.json
+        type: openapi
+    ```
+  </Step>
+
+  <Step title="Define your first workflow and step">
+    Replace `workflows: []` with a workflow that fetches a pet by ID:
+
+    ```yaml
+    workflows:
+      - workflowId: getPetById
+        summary: Retrieve a pet by ID
+        inputs:
+          type: object
+          properties:
+            petId:
+              type: integer
+        steps:
+          - stepId: fetchPet
+            operationId: getPetById
+            parameters:
+              - name: petId
+                in: path
+                value: "$inputs.petId"
+            successCriteria:
+              - condition: $statusCode == 200
+            outputs:
+              pet: $response.body
+        outputs:
+          pet: $steps.fetchPet.outputs.pet
+    ```
+
+    Your validation errors should clear as you type. The complete file now looks like this:
+
+    ```yaml
+    arazzo: "1.0.1"
+    info:
+      title: Pet Store Workflow
+      version: "1.0.0"
+      description: Retrieve a pet by its ID
+    sourceDescriptions:
+      - name: petstore
+        url: https://petstore3.swagger.io/api/v3/openapi.json
+        type: openapi
+    workflows:
+      - workflowId: getPetById
+        summary: Retrieve a pet by ID
+        inputs:
+          type: object
+          properties:
+            petId:
+              type: integer
+        steps:
+          - stepId: fetchPet
+            operationId: getPetById
+            parameters:
+              - name: petId
+                in: path
+                value: "$inputs.petId"
+            successCriteria:
+              - condition: $statusCode == 200
+            outputs:
+              pet: $response.body
+        outputs:
+          pet: $steps.fetchPet.outputs.pet
+    ```
+  </Step>
+
+  <Step title="Open the Preview">
+    Click the **preview icon** (eye) in the editor title toolbar, or open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run **Open Arazzo Preview**.
+
+    The preview panel opens beside your editor, showing your workflow as interactive documentation. It updates in real time as you edit the YAML.
+  </Step>
+
+  <Step title="Open the Flowchart">
+    Click the **graph icon** in the editor toolbar, or run **Open Arazzo Flowchart** from the Command Palette.
+
+    Your workflow appears as a Mermaid.js flowchart. Click any step in the diagram to jump to it in the editor and preview.
+  </Step>
+</Steps>
+
+## Next steps
+
+Now that your first workflow is running, explore these topics to go further:
+
+<CardGroup cols={2}>
+  <Card title="Multi-Step API" icon="link" href="/guides/multi-step-api">
+    Chain API calls and pass data between steps
+  </Card>
+  <Card title="Workflow Dependencies" icon="sitemap" href="/guides/workflow-dependencies">
+    Compose workflows with dependsOn
+  </Card>
+  <Card title="Validation" icon="circle-check" href="/features/validation">
+    Understand all real-time validation rules
+  </Card>
+  <Card title="Runtime Expressions" icon="dollar-sign" href="/arazzo/runtime-expressions">
+    Master $steps, $inputs, $response, and more
+  </Card>
+</CardGroup>
+
+<Tip>
+  Want to try Arazzo without installing anything? Use the online playground at [arazzo.connethics.com](https://arazzo.connethics.com/) to paste and visualize a spec directly in your browser.
+</Tip>

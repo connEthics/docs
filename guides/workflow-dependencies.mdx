@@ -1,0 +1,136 @@
+---
+title: "Manage Workflow Dependencies with dependsOn"
+sidebarTitle: "Workflow Dependencies"
+description: "Use Arazzo's dependsOn field to declare execution order between workflows and call sub-workflows from steps using workflowId references."
+---
+
+As your API orchestration grows, you will often want to split complex sequences into smaller, reusable workflows and then compose them together. Arazzo provides two complementary mechanisms for this: `dependsOn` lets you declare that one workflow must complete before another begins, and the `workflowId` field on a step lets you call an entire workflow as a sub-routine from inside another workflow. Together, these two features give you precise control over execution order and reuse across your Arazzo description.
+
+## Mechanism 1: `dependsOn`
+
+The `dependsOn` field is a list of `workflowId` values that must be completed before the current workflow runs. Use it when one workflow produces prerequisite state — such as creating a user account before a workflow that fetches user data.
+
+```yaml
+workflows:
+  - workflowId: setupWorkflow
+    steps:
+      - stepId: createUser
+        operationId: createUser
+        successCriteria:
+          - condition: $statusCode == 201
+        outputs:
+          userId: $response.body#/id
+
+  - workflowId: mainWorkflow
+    dependsOn:
+      - setupWorkflow
+    steps:
+      - stepId: fetchUserData
+        operationId: getUser
+        parameters:
+          - name: userId
+            in: path
+            value: "$steps.createUser.outputs.userId"
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+In this example, `mainWorkflow` declares that `setupWorkflow` must complete first. Execution tooling that respects the Arazzo specification will honour this ordering.
+
+<Warning>
+  Every workflow ID listed in `dependsOn` must be defined in the same Arazzo document. If you reference a `workflowId` that does not exist, Arazzo VSCode raises the validation error: `Referenced workflow "<id>" not found in dependsOn`, where `<id>` is the unrecognised workflow ID. Workflow IDs are case-sensitive.
+</Warning>
+
+## Mechanism 2: Calling a workflow from a step
+
+You can invoke another workflow directly from inside a step by setting the `workflowId` field on the step instead of `operationId` or `operationPath`. This turns the referenced workflow into a callable sub-routine that runs inline when the step executes.
+
+```yaml
+workflows:
+  - workflowId: authWorkflow
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: "$inputs.username"
+          - name: password
+            in: query
+            value: "$inputs.password"
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+
+  - workflowId: dataWorkflow
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: authenticate
+        workflowId: authWorkflow
+        parameters:
+          - name: username
+            in: query
+            value: "$inputs.username"
+          - name: password
+            in: query
+            value: "$inputs.password"
+      - stepId: fetchData
+        operationId: findPetsByStatus
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: api_key
+            in: header
+            value: "$steps.authenticate.outputs.sessionToken"
+        successCriteria:
+          - condition: $statusCode == 200
+```
+
+Each step must contain **exactly one** of `operationId`, `operationPath`, or `workflowId`. Providing more than one — or none at all — is a validation error that the extension highlights immediately.
+
+## Choosing the right mechanism
+
+| Need | Use |
+|---|---|
+| Enforce execution order without direct data passing | `dependsOn` |
+| Reuse a workflow as a callable sub-routine and pass its outputs forward | `workflowId` in a step |
+| Both ordering and inline invocation | Both together |
+
+<Note>
+  Arazzo supports multi-document descriptions. If you want to reuse a workflow defined in a separate Arazzo file, add that file as a source description with `type: arazzo`:
+
+  ```yaml
+  sourceDescriptions:
+    - name: authFlows
+      url: ./auth-workflows.arazzo.yaml
+      type: arazzo
+  ```
+
+  Workflows from external Arazzo documents can then be referenced in steps using `workflowId` following the Arazzo specification's expression syntax for cross-document references.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Multi-Step API" icon="link" href="/guides/multi-step-api">
+    Pass data between steps with runtime expressions
+  </Card>
+  <Card title="Troubleshooting" icon="triangle-exclamation" href="/guides/troubleshooting">
+    Fix dependsOn reference errors and more
+  </Card>
+</CardGroup>

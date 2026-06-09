@@ -1,0 +1,116 @@
+---
+title: "Arazzo Step Object Reference: Fields and Mutual Exclusions"
+sidebarTitle: "Step Object"
+description: "Complete reference for Arazzo Step Object fields: stepId, operationId, operationPath, workflowId, parameters, requestBody, successCriteria, and outputs."
+---
+
+A Step Object represents a single unit of work within an Arazzo workflow — typically a call to a specific API operation or an invocation of another workflow. Steps are executed in the order they appear in the `steps` array. Each step can pass parameters, supply a request body, evaluate success criteria against the response, and capture response data as named outputs for subsequent steps.
+
+<Warning>
+  Each step must specify **exactly one** of `operationId`, `operationPath`, or `workflowId`. These three fields are mutually exclusive. Providing more than one or omitting all three is invalid and will produce a validation error.
+</Warning>
+
+## Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `stepId` | string | ✅ Yes | A unique identifier for this step within the workflow. Used in runtime expressions like `$steps.<stepId>.outputs.<name>`. |
+| `description` | string | No | A human-readable description of what this step does. |
+| `operationId` | string | ✴️ One of three | References a named operation (by `operationId`) from a `sourceDescription`. Mutually exclusive with `operationPath` and `workflowId`. |
+| `operationPath` | string | ✴️ One of three | A JSON Pointer path to an operation within a source description, prefixed with the source description URL expression. Mutually exclusive with `operationId` and `workflowId`. |
+| `workflowId` | string | ✴️ One of three | The `workflowId` of another workflow to invoke as a sub-workflow. Mutually exclusive with `operationId` and `operationPath`. |
+| `parameters` | array of Parameter Objects | No | Parameter overrides for this step. These values take precedence over any workflow-level `parameters`. |
+| `requestBody` | Request Body Object | No | The request body payload to pass to the API operation. |
+| `successCriteria` | array of Criterion Objects | No | A list of assertions that must **all** pass for the step to be considered successful. See the [Criterion Object reference](/reference/criterion-object). |
+| `onSuccess` | array of Success Action Objects | No | Actions to execute when this step succeeds. Overrides the workflow-level `successActions` for this step. |
+| `onFailure` | array of Failure Action Objects | No | Actions to execute when this step fails. Overrides the workflow-level `failureActions` for this step. |
+| `outputs` | map (string → runtime expression) | No | Named values captured from the step's response. Keys are output names; values are runtime expressions like `$response.body#/token`. |
+
+### `stepId`
+
+The `stepId` must be unique within its parent workflow. Duplicate step IDs in the same workflow produce a diagnostic error in VS Code's Problems panel. Once defined, you reference a step's outputs from later steps using `$steps.<stepId>.outputs.<outputName>`.
+
+### `operationId`
+
+Use `operationId` when the target API operation is identified by name in a linked OpenAPI description. The value must match an `operationId` value declared in one of the document's `sourceDescriptions`.
+
+### `operationPath`
+
+Use `operationPath` when you need to reference an operation by its path and HTTP method rather than by name. The value combines a runtime expression resolving to a source description URL with a JSON Pointer fragment:
+
+```yaml
+operationPath: "{$sourceDescriptions.petStoreDescription.url}#/paths/~1pet~1findByStatus/get"
+```
+
+### `workflowId`
+
+Use `workflowId` to call another workflow defined in the same Arazzo document as a sub-workflow. The referenced workflow's outputs become available in subsequent steps via runtime expressions.
+
+### `parameters`
+
+Each parameter entry specifies a `name`, an `in` location (`query`, `header`, `path`, or `cookie`), and a `value` (which can be a literal or a runtime expression). Step-level parameters override workflow-level parameters of the same name.
+
+### `successCriteria`
+
+All criterion conditions in the `successCriteria` array must evaluate to `true` for the step to succeed. If any criterion fails, the step is considered failed and the `onFailure` actions (if any) are triggered. See the [Criterion Object reference](/reference/criterion-object) for supported criterion types.
+
+### `outputs`
+
+Step outputs capture data from the HTTP response for use in later steps or as workflow-level outputs. Values are runtime expressions:
+
+| Expression | Captures |
+|---|---|
+| `$statusCode` | The HTTP response status code |
+| `$response.body` | The full response body |
+| `$response.body#/path/to/field` | A specific field from the response body via JSON Pointer |
+| `$response.header.<name>` | A specific response header value |
+
+---
+
+## YAML Example
+
+The following example shows a step that calls a named operation, passes parameters sourced from workflow inputs and a previous step's output, asserts success, and captures response data:
+
+```yaml
+steps:
+  - stepId: loginStep
+    description: Authenticate the user and retrieve a session token
+    operationId: loginUser
+    parameters:
+      - name: username
+        in: query
+        value: $inputs.username
+      - name: password
+        in: query
+        value: $inputs.password
+    successCriteria:
+      - condition: $statusCode == 200
+      - condition: $response.body#/token != null
+    outputs:
+      sessionToken: $response.body#/token
+      expiresAt: $response.header.X-Expires-After
+
+  - stepId: fetchProfileStep
+    description: Retrieve the authenticated user's profile
+    operationId: getUserProfile
+    parameters:
+      - name: Authorization
+        in: header
+        value: $steps.loginStep.outputs.sessionToken
+    requestBody:
+      contentType: application/json
+      payload:
+        expand:
+          - orders
+          - preferences
+    successCriteria:
+      - condition: $statusCode == 200
+    onFailure:
+      - name: retryFetch
+        type: retry
+        retryAfter: 1
+        retryLimit: 2
+    outputs:
+      userId: $response.body#/id
+      userEmail: $response.body#/email
+```

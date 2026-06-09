@@ -1,0 +1,132 @@
+---
+title: "Arazzo Specification Object Reference: Top-Level Fields"
+sidebarTitle: "Arazzo Object"
+description: "Top-level Arazzo Specification Object reference: arazzo version, info, sourceDescriptions (min 1), workflows (min 1), and optional components."
+---
+
+The Arazzo Specification Object is the root of every Arazzo document. It ties together the version declaration, document metadata, the source API descriptions your workflows operate against, and the workflows themselves. Every valid Arazzo document must contain this top-level structure, and Arazzo VSCode uses the presence of the `arazzo:` key at the document root to identify and activate on Arazzo files.
+
+<Note>
+  Arazzo VSCode auto-detects Arazzo documents by checking for the `arazzo:` key at the root of any open YAML file. Files that lack this key are treated as plain YAML and will not activate the preview, flowchart, or completion features.
+</Note>
+
+## Top-Level Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `arazzo` | string | ✅ Yes | The Arazzo Specification version this document conforms to. |
+| `info` | Info Object | ✅ Yes | Metadata about the workflows in this document. |
+| `sourceDescriptions` | array of Source Description Objects | ✅ Yes | The API descriptions (OpenAPI or Arazzo) that workflows reference. At least one entry is required. |
+| `workflows` | array of Workflow Objects | ✅ Yes | The ordered list of workflows defined in this document. At least one entry is required. |
+| `components` | Components Object | No | Reusable schemas, parameters, and actions that can be referenced elsewhere in the document. |
+
+### `arazzo`
+
+The `arazzo` field declares which version of the Arazzo Specification this document uses. Arazzo VSCode currently supports:
+
+- `"1.0.0"`
+- `"1.0.1"`
+
+Using an unrecognized version string triggers a validation warning in the Problems panel, but the extension will still attempt to parse and display the document.
+
+### `info`
+
+The `info` object provides human-readable metadata about the Arazzo document. It is displayed prominently in the Preview panel header.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `info.title` | string | ✅ Yes | A human-readable title for the Arazzo document. |
+| `info.version` | string | ✅ Yes | The version identifier of this Arazzo document (not the spec version). |
+| `info.summary` | string | No | A short, one-line summary of the document's purpose. |
+| `info.description` | string | No | A longer description of the workflows and their overall goal. Supports Markdown. |
+
+### `sourceDescriptions`
+
+The `sourceDescriptions` array lists every external API description that workflows in this document reference. Each entry is a Source Description Object:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | ✅ Yes | A unique identifier for this source used in runtime expressions (e.g., `$sourceDescriptions.petStore.url`). |
+| `url` | string | ✅ Yes | The URL pointing to the source description document (OpenAPI YAML/JSON, or another Arazzo file). |
+| `type` | string | No | The kind of source description. Accepted values: `openapi` or `arazzo`. |
+
+The extension validates that `type` is either `openapi` or `arazzo`. Any other value produces a diagnostic error in the Problems panel.
+
+### `workflows`
+
+The `workflows` array contains all the Workflow Objects defined in the document. There must be at least one workflow. See the [Workflow Object reference](/reference/workflow-object) for the full list of fields.
+
+### `components`
+
+The optional `components` object holds reusable definitions — schemas, parameter objects, and action objects — that you can reference from workflows and steps using `$components.*` runtime expressions.
+
+---
+
+## Complete YAML Example
+
+The following example shows a fully annotated Arazzo document for a pet store purchase workflow:
+
+```yaml
+# Arazzo specification version — required
+arazzo: "1.0.1"
+
+# Document metadata — required
+info:
+  title: Pet Store Purchase Workflow
+  summary: Demonstrates searching for and purchasing a pet via API calls
+  description: |
+    This Arazzo Description walks through the steps to log in a user,
+    search for available pets, and complete a purchase.
+  version: "1.0.0"
+
+# Source API descriptions this document references — at least one required
+sourceDescriptions:
+  - name: petStoreDescription
+    url: https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml
+    type: openapi
+
+# Workflow definitions — at least one required
+workflows:
+  - workflowId: loginAndPurchasePet
+    summary: Log in and purchase an available pet
+    description: Authenticates the user, finds an available pet, and places an order.
+    inputs:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    steps:
+      - stepId: loginStep
+        operationId: loginUser
+        parameters:
+          - name: username
+            in: query
+            value: $inputs.username
+          - name: password
+            in: query
+            value: $inputs.password
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          sessionToken: $response.body
+      - stepId: findPetStep
+        operationPath: "{$sourceDescriptions.petStoreDescription.url}#/paths/~1pet~1findByStatus/get"
+        parameters:
+          - name: status
+            in: query
+            value: available
+          - name: Authorization
+            in: header
+            value: $steps.loginStep.outputs.sessionToken
+        successCriteria:
+          - condition: $statusCode == 200
+        outputs:
+          availablePets: $response.body
+    outputs:
+      pets: $steps.findPetStep.outputs.availablePets
+
+# Optional reusable components
+components: {}
+```

@@ -1,0 +1,49 @@
+---
+title: "Arazzo VSCode FAQ: Versions, Telemetry, and File Support"
+sidebarTitle: "FAQ"
+description: "Answers to common questions about Arazzo VSCode: supported versions, telemetry, file types, the online playground, and contributing."
+---
+
+Below you will find answers to the most common questions about the Arazzo VSCode extension. If your question is not covered here, you can open an issue on [GitHub](https://github.com/connEthics/arazzo-vscode/issues).
+
+<Accordion title="What versions of VS Code are supported?">
+  Arazzo VSCode requires **VS Code 1.90.0 or newer**. Older versions of VS Code are not supported. You can check your VS Code version by going to **Help → About** in the menu bar.
+</Accordion>
+
+<Accordion title="What Arazzo specification versions are supported?">
+  Arazzo VSCode supports Arazzo specification versions **1.0.0** and **1.0.1**. The specification treats these two versions as equivalent for tooling purposes — the patch version does not introduce breaking changes.
+
+  If you declare an unrecognized version string in the `arazzo:` field, the extension will display a warning in the Problems panel but will still attempt to parse, preview, and validate the document.
+</Accordion>
+
+<Accordion title="Does the extension collect telemetry or usage data?">
+  **No.** Arazzo VSCode collects no telemetry, analytics, crash reports, or usage data of any kind. Your files, workflows, and activity are entirely private and never leave your machine.
+</Accordion>
+
+<Accordion title="Which file types does the extension work with?">
+  Arazzo VSCode activates on `.yaml` files. Once a YAML file is open, the extension checks for the `arazzo:` key at the root of the document. Only files that contain this key are treated as Arazzo documents and receive the full feature set — preview, flowchart, autocompletion, and validation. Plain YAML files without the `arazzo:` key are left unchanged.
+</Accordion>
+
+<Accordion title="Is there an online playground?">
+  Yes. You can try authoring and visualizing Arazzo specifications directly in your browser at [https://arazzo.connethics.com/](https://arazzo.connethics.com/) — no installation required. The playground is useful for experimenting with Arazzo before setting up a local project.
+</Accordion>
+
+<Accordion title="Does the extension work with JSON Arazzo files?">
+  Not currently. Arazzo VSCode activates on YAML files only. Arazzo specifications written in JSON (`.json` files) are not supported in this version of the extension. If you need JSON support, consider converting your file to YAML format or opening an issue on GitHub to request this feature.
+</Accordion>
+
+<Accordion title="How do I report a bug or request a feature?">
+  Open an issue on the GitHub repository at [https://github.com/connEthics/arazzo-vscode/issues](https://github.com/connEthics/arazzo-vscode/issues). Please include your VS Code version, the extension version, and a description of the problem or feature request. Attaching a minimal YAML file that reproduces the issue is especially helpful for bug reports.
+</Accordion>
+
+<Accordion title="Is the extension free?">
+  Yes. Arazzo VSCode is completely free to use and is open-source under the **MIT license**. You can view the source code, contribute, or fork it at [https://github.com/connEthics/arazzo-vscode](https://github.com/connEthics/arazzo-vscode).
+</Accordion>
+
+<Accordion title="Can I use the extension with multiple Arazzo files open at once?">
+  Yes. The Preview panel supports multiple tabs simultaneously — you can open a separate preview for each Arazzo specification you have active in the editor. Each panel tracks its own document and updates independently as you type.
+</Accordion>
+
+<Accordion title="Where is the source code?">
+  The full source code for Arazzo VSCode is available on GitHub at [https://github.com/connEthics/arazzo-vscode](https://github.com/connEthics/arazzo-vscode). Contributions, issues, and pull requests are welcome.
+</Accordion>

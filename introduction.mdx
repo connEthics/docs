@@ -1,0 +1,54 @@
+---
+title: "Arazzo VSCode: Author and Validate API Workflows in VS Code"
+sidebarTitle: "Introduction"
+description: "Arazzo VSCode is a VS Code extension for authoring, visualizing, and validating Arazzo specifications. Learn what the extension does and why you need it."
+---
+
+Arazzo VSCode is a free VS Code extension by connEthics that brings full, first-class support for the Arazzo specification directly into your editor. It gives you live documentation previews, interactive flowchart diagrams, real-time validation, context-aware autocompletion, and structured outline navigation — so you can design and debug multi-step API workflows with the same confidence you get from mature language tooling.
+
+## What is Arazzo?
+
+[Arazzo](https://spec.openapis.org/arazzo/latest.html) is an open specification published by the **OpenAPI Initiative** for describing multi-step API workflows. Where an OpenAPI document describes individual operations, an Arazzo document orchestrates sequences of those operations — capturing dependencies, conditional branching, data passing between steps, and success criteria — all in a declarative YAML format. Arazzo is the standard way to describe end-to-end API scenarios such as authentication flows, checkout sequences, and multi-resource provisioning pipelines.
+
+## Key capabilities
+
+Arazzo VSCode enhances every stage of working with an Arazzo specification, from initial authoring through validation and review.
+
+<CardGroup cols={2}>
+  <Card title="Live Preview" icon="eye" href="/features/live-preview">
+    Render your Arazzo specification as interactive documentation in a side-by-side panel. The preview refreshes on every keystroke, supports multiple open tabs, and adapts to your VS Code theme.
+  </Card>
+  <Card title="Flowchart View" icon="diagram-project" href="/features/flowchart">
+    Visualize your workflows as Mermaid-powered flowchart diagrams. The diagram auto-syncs to the workflow under your cursor, and clicking a step in the diagram jumps to it in both the editor and the preview panel.
+  </Card>
+  <Card title="Validation" icon="circle-check" href="/features/validation">
+    Get real-time diagnostics as you type. The extension checks YAML syntax and Arazzo-specific structure — missing required fields, invalid references, and other spec violations — and surfaces inline error and warning markers in the editor gutter.
+  </Card>
+  <Card title="Autocompletion" icon="wand-magic-sparkles" href="/features/autocompletion">
+    Receive context-aware suggestions for Arazzo keywords, field names, and structural patterns as you type. Autocompletion keeps your YAML well-formed without requiring you to memorise the full specification.
+  </Card>
+  <Card title="Outline Navigation" icon="list-tree" href="/features/outline-navigation">
+    Navigate large specifications quickly using the VS Code Outline view. Workflows, steps, parameters, and components are all exposed as structured symbols, letting you jump to any part of your spec in one click.
+  </Card>
+</CardGroup>
+
+## Commands
+
+Arazzo VSCode contributes two commands to the VS Code Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+| Command ID | Title | Description |
+|---|---|---|
+| `arazzo-vscode.openPreview` | Open Arazzo Preview | Open the interactive documentation panel beside your editor |
+| `arazzo-vscode.openFlowchart` | Open Arazzo Flowchart | Open the Mermaid-powered workflow diagram panel |
+
+Both commands are also available as icons in the editor toolbar whenever a YAML file is open — the eye icon launches the preview and the graph icon launches the flowchart.
+
+## Privacy and the online playground
+
+Arazzo VSCode collects **no telemetry**, analytics, or usage data of any kind. Your specifications stay entirely on your machine.
+
+If you want to explore Arazzo without installing anything, try the **[online playground](https://arazzo.connethics.com/)** — the same preview and flowchart experience, available directly in your browser.
+
+<Note>
+  Arazzo VSCode requires **VS Code 1.90.0 or newer**. Check your installed version under **Help → About** and update VS Code before installing the extension if needed.
+</Note>

@@ -1,0 +1,120 @@
+---
+title: "Criterion Object Reference for Arazzo Success Conditions"
+sidebarTitle: "Criterion Object"
+description: "Reference for the Arazzo Criterion Object: condition, context, and type fields supporting simple, regex, jsonpath, and xpath evaluation strategies."
+---
+
+A Criterion Object defines a single assertion that Arazzo evaluates to determine whether a step (or action) succeeded. You place criterion objects in a step's `successCriteria` array or inside the `criteria` array of a Success or Failure Action Object. Every criterion in the list must pass for the overall check to succeed — they are evaluated as a logical AND.
+
+<Note>
+  When the `type` field is omitted, Arazzo assumes `simple`. You only need to set `type` explicitly when using `regex`, `jsonpath`, or `xpath` conditions.
+</Note>
+
+## Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `condition` | string | ✅ Yes | The assertion expression to evaluate. Its format depends on the `type` field. |
+| `context` | runtime expression | No | A runtime expression that sets the value the `condition` is evaluated against. When omitted, the condition evaluates directly against the available runtime context. |
+| `type` | string | No | The evaluation strategy for the condition. Defaults to `simple` if not specified. |
+
+### `condition`
+
+The `condition` string holds the actual assertion. Its syntax varies by `type`:
+
+- For `simple`, it is a comparison expression (e.g., `$statusCode == 200`).
+- For `regex`, it is a regular expression pattern string (e.g., `^Bearer\s`).
+- For `jsonpath`, it is a JSONPath expression (e.g., `$.user.id != null`).
+- For `xpath`, it is an XPath expression against an XML response body.
+
+### `context`
+
+The `context` field lets you narrow the value being tested. For example, setting `context` to `$response.body#/status` and `condition` to `active` with `type: simple` checks that the `status` field in the response body equals `"active"`. When `context` is omitted, the condition expression itself must include a runtime expression that resolves to the target value.
+
+### `type`
+
+The `type` field controls how Arazzo interprets and evaluates the `condition` string.
+
+---
+
+## Criterion Type Reference
+
+| Type | Description | Example `condition` |
+|---|---|---|
+| `simple` | Evaluates a comparison expression using runtime expressions. Supports `==`, `!=`, `<`, `>`, `<=`, `>=`. | `$statusCode == 200` |
+| `regex` | Matches the value resolved by `context` against a regular expression pattern. | `^Bearer\s` |
+| `jsonpath` | Applies a JSONPath expression to the value resolved by `context` (typically a JSON response body). | `$.items[*].id != null` |
+| `xpath` | Applies an XPath expression to an XML value resolved by `context`. | `//status[text()='active']` |
+
+---
+
+## Examples by Type
+
+### `simple` — Status Code and Body Field Check
+
+Use `simple` for direct comparisons against runtime expression values. This is the most common criterion type.
+
+```yaml
+successCriteria:
+  - condition: $statusCode == 200
+  - condition: $response.body#/active == true
+  - context: $response.body#/role
+    condition: admin
+    type: simple
+```
+
+### `regex` — Pattern Matching
+
+Use `regex` when you need to verify that a value matches a pattern, such as checking that an `Authorization` header contains a valid Bearer token format.
+
+```yaml
+successCriteria:
+  - context: $response.header.Authorization
+    condition: "^Bearer\\s[A-Za-z0-9\\-._~+/]+=*$"
+    type: regex
+```
+
+### `jsonpath` — Deep JSON Inspection
+
+Use `jsonpath` to run JSONPath expressions against a JSON response body. Set `context` to the response body or a sub-object, then write your JSONPath expression as the `condition`.
+
+```yaml
+successCriteria:
+  - context: $response.body
+    condition: "$.user.id != null"
+    type: jsonpath
+  - context: $response.body
+    condition: "$.items.length() > 0"
+    type: jsonpath
+```
+
+### `xpath` — XML Response Validation
+
+Use `xpath` when the API returns XML. Set `context` to the XML response body and write your XPath expression as the `condition`.
+
+```yaml
+successCriteria:
+  - context: $response.body
+    condition: "//status[text()='active']"
+    type: xpath
+  - context: $response.body
+    condition: "count(//item) > 0"
+    type: xpath
+```
+
+---
+
+## Using Criteria in Action Objects
+
+Criterion Objects also appear in the `criteria` array of Success Action and Failure Action Objects. In that context, the criteria determine whether the action fires at all:
+
+```yaml
+onFailure:
+  - name: retryOnServerError
+    type: retry
+    retryAfter: 2
+    retryLimit: 3
+    criteria:
+      - condition: $statusCode == 503
+        type: simple
+```
